@@ -1,0 +1,134 @@
+colorscheme gruvbox
+
+nnoremap <f1> :open<cr>
+nnoremap <f2> :edit<cr>
+nnoremap <f3> :mkdir<space>
+nnoremap <f4> :touch<space>
+nnoremap <f5> :copy<cr>
+nnoremap <f6> :move<cr>
+nnoremap <f8> :delete<cr>
+
+nnoremap S :sort<cr>
+set syscalls
+set dotfiles
+set vicmd=vim
+set vimhelp
+set timefmt='%Y/%m/%d %H:%M'
+set vifminfo=bookmarks
+set dirsize
+set viewcolumns=-{name}..,8{size},16{mtime}.
+set wildmenu
+set wildstyle=popup
+" Normal dirs
+fileview */ tree %c -L 0
+
+" Hidden dirs  
+fileview *./ tree %c -L 1
+
+" .. Parent dir
+fileview ../ tree %c -L 0
+    fileviewer *.pdf
+        \ vifmimg pdf %px %py %pw %ph %c
+        \ %pc
+        \ vifmimg clear
+
+    fileviewer *.djvu
+        \ vifmimg djvu %px %py %pw %ph %c
+        \ %pc
+        \ vifmimg clear
+
+    fileviewer *.epub
+        \ vifmimg epub %px %py %pw %ph %c
+        \ %pc
+        \ vifmimg clear
+
+    fileviewer <video/*>
+        \ vifmimg video %px %py %pw %ph %c
+        \ %pc
+        \ vifmimg clear
+
+    fileviewer <image/*>
+        \ vifmimg draw %px %py %pw %ph %c
+        \ %pc
+        \ vifmimg clear
+
+    fileviewer <audio/*>
+        \ vifmimg audio %px %py %pw %ph %c
+        \ %pc
+        \ vifmimg clear
+
+    fileviewer <font/*>
+        \ vifmimg font %px %py %pw %ph %c
+        \ %pc
+        \ vifmimg clear
+" Copy selected files to clipboard (absolute paths)
+" nnoremap <C-c> :exec '!echo -n "' . expand('%:p') . '" | wl-copy'<CR>
+" vnoremap <C-c> :exec '!echo -n "' . join(map(getselnames(), 'fnameescape(v:val)'), '" "') . '" | wl-copy'<CR>
+
+" Paste files from clipboard to current directory
+" nnoremap <C-p> :!wl-copy %d
+ nnoremap <C-p> :!exec wl-paste -p  >%d
+nnoremap w :view<cr>
+nnoremap yd :!echo -n %c:p | xclip
+" nnoremap yf :!echo -n %c:p | xargs cat | wl-copy --type mime -p -f
+" nnoremap yf :!exec cat %c:p | wl-copy
+nnoremap yf :!xclip < "%c:p" && xclip "$(realpath "%c:p")"<CR>
+
+nnoremap <C-c> :!exec xclip --type text/uri-list file://< %c:p
+" nnoremap <C-c> :!exec echo -n %c:p | xargs cat | wl-copy
+" nmap du :!du -s -BM 1&gt;&amp;2 &amp;&lt;cr&gt;
+" nmap df :!df . -BM 1&gt;&amp;2 &amp;&lt;cr&gt;
+  set statusline='%a free of %c %10u %s %E %f %d'
+
+if $DISPLAY != '' && executable('kitty')
+    nnoremap ,t :!kitty &<cr>
+elseif $TERMINAL != ''
+    nnoremap ,t :!$TERMINAL &<cr>
+endif
+nnoremap ,z :edit ~/.config/sway/config<cr>
+nnoremap ,x :edit ~/.config/nvim/lua/<cr>
+nnoremap ,c :write | edit /home/abhirup/.config/vifm/vifmrc | restart full<cr>
+nnoremap ,v :!exec %c:p &
+if $DISPLAY != '' && executable('nvim')
+    nnoremap ,C :!nvim /home/abhirup/.config/vifm/vifmrc
+endif
+
+
+" Audio
+filetype {*.pdf},
+        \ librewolf --new-window %f
+filetype {*.wav,*.mp3,*.flac,*.m4a,*.wma,*.ape,*.ac3,*.og[agx],*.spx,*.opus,
+         \*.aac,*.mpga},
+        \<audio/*>
+    "  \ {Play using MPlayer}
+    "   \ mplayer %f,
+       \ {Play using mpv}
+       \ mpv --no-video keep-open=yes %f %s,
+       \ {Play using ffplay}
+       \ ffplay -nodisp -hide_banner -autoexit %c,
+fileviewer {*.wav,*.mp3,*.flac,*.m4a,*.wma,*.ape,*.ac3,*.og[agx],*.spx,*.opus,
+           \*.aac,*.mpga},
+          \<audio/*>
+         \ ffprobe -hide_banner -pretty %c 2>&1
+
+" Video
+filextype {*.avi,*.mp4,*.wmv,*.dat,*.3gp,*.ogv,*.mkv,*.mpg,*.mpeg,*.vob,
+          \*.fl[icv],*.m2v,*.mov,*.webm,*.mts,*.m4v,*.r[am],*.qt,*.divx,
+          \*.as[fx],*.unknown_video},
+         \<video/*>
+      "  \ {View using ffplay}
+      "  \ ffplay -fs -hide_banner -autoexit %f,
+     "   \ {View using Dragon}
+      "  \ dragon %f:p,
+      "  \ {View using mplayer}
+       " \ mplayer %f,
+        \ {Play using mpv}
+        \ mpv keep-open=yes %f &,
+" shell scripts
+filextype {*}
+        \ exec ./%f & 
+" fileviewer {*.avi,*.mp4,*.wmv,*.dat,*.3gp,*.ogv,*.mkv,*.mpg,*.mpeg,*.vob,
+ "          \*.fl[icv],*.m2v,*.mov,*.webm,*.mts,*.m4v,*.r[am],*.qt,*.divx,
+  "         \*.as[fx],*.unknown_video},
+   "       \<video/*>
+    "     \ ffprobe -hide_banner -pretty %c 2>&1

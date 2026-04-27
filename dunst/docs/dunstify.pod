@@ -1,0 +1,119 @@
+=head1 NAME
+
+dunstify - a program to send desktop notifications
+
+=head1 SYNOPSIS
+
+dunstify [OPTION...] SUMMARY [BODY]
+
+=head1 DESCRIPTION
+
+Dunstify is a notify-send alternative that can be used to
+send desktop notifications from the command line.
+
+=head1 OPTIONS
+
+=over 4
+
+=item B<-?, --help>
+
+Show help options.
+
+=item B<-a, --app-name=NAME>
+
+Set the app name of the notification.
+Accepted legacy alias: B<--appname>.
+
+=item B<-u, --urgency=URG>
+
+Set the urgency level (low, normal, critical) of the notification.
+
+=item B<-h, --hint=HINT>
+
+Specifies hints to pass. Valid types are BOOLEAN, INT, DOUBLE, STRING, BYTE and VARIANT.
+Accepted legacy alias: B<--hints>.
+
+=item B<-A, --action=ACTION>
+
+Specifies the actions to display to the user.
+
+=item B<-e, --transient>
+
+Mark the notification as transient.
+
+=item B<-t, --expire-time=TIMEOUT>
+
+The time in milliseconds until the notification expires.
+Accepted legacy alias: B<--timeout>.
+
+=item B<-i, --icon=ICON>
+
+Specifies an icon to display with the notification.
+
+=item B<-I, --raw-icon=PATH>
+
+Path to the icon to be sent as raw image data.
+Accepted legacy alias: B<--raw_icon>.
+
+=item B<-c, --category=TYPE>
+
+The category of this notification.
+
+=item B<-p, --print-id>
+
+Print id, which can be used to update/replace this notification.
+Accepted legacy alias: B<--printid>.
+
+=item B<-r, --replace-id=ID>
+
+Set the id of this notification to The ID of the notification to replace.
+Accepted legacy alias: B<--replace>.
+
+=item B<-C, --close=ID>
+
+Close the notification with the specified ID.
+
+=item B<-w, --wait>
+
+Block until notification is closed and print close reason.
+Accepted legacy alias: B<-b, --block>.
+
+=item B<--stack-tag=TAG>
+
+Set the dunst stack tag property of the notification to TAG.
+A tagged notification will replace an earlier notification with the same tag.
+
+The following commands are equivalent:
+
+    dunstify -h string:x-dunst-stack-tag:TAG "hello"
+
+    dunstify --stack-tag TAG "hello"
+
+=item B<--capabilities>
+
+Print the server capabilities and exit.
+
+=item B<--serverinfo>
+
+Print server information and exit.
+
+=item B<-v, --version>
+
+Print dunstify version information.
+Not present on Dunst versions prior to v1.13.
+
+=back
+
+=head1 COPYRIGHT
+
+Copyright 2011-2014 Sascha Kruse
+
+Copyright 2014-2026 Dunst contributors
+
+Dunst is released under the BSD 3-Clause License, see LICENSE for more information.
+
+If you feel that copyrights are violated, please send an email to the maintainers.
+
+=head1 SEE ALSO
+
+notify-send(1), dunst(5), dunstctl(1), dunst(1)

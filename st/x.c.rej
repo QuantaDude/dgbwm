@@ -1,0 +1,15 @@
+--- x.c
++++ x.c
+@@ -62,6 +65,12 @@ static void zoom(const Arg *);
+ static void zoomabs(const Arg *);
+ static void zoomreset(const Arg *);
+ static void ttysend(const Arg *);
++static void previewimage(const Arg *);
++static void showimageinfo(const Arg *);
++static void togglegrdebug(const Arg *);
++static void dumpgrstate(const Arg *);
++static void unloadimages(const Arg *);
++static void toggleimages(const Arg *);
+ 
+ /* config.h for applying patches and the configuration. */
+ #include "config.h"
