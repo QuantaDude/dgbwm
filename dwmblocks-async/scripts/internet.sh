@@ -1,5 +1,23 @@
 #!/bin/sh
 
+BACKEND="${1:-auto}"
+detect_backend() {
+    case "$BACKEND" in
+        connman) echo "connman" ;;
+        nm|networkmanager) echo "nm" ;;
+        iw) echo "iw" ;;
+        auto)
+            command -v connmanctl >/dev/null && echo "connman" && return
+            command -v nmcli >/dev/null && echo "nm" && return
+            command -v iw >/dev/null && echo "iw" && return
+            echo "none"
+            ;;
+        *) echo "none" ;;
+    esac
+}
+
+NET_BACKEND="$(detect_backend)"
+
 STATE_FILE="/tmp/internet_block_view"
 CACHE_FILE="/tmp/internet_block_cache"
 
@@ -7,12 +25,24 @@ CACHE_FILE="/tmp/internet_block_cache"
 view="$(cat "$STATE_FILE")"
 
 case $BLOCK_BUTTON in
-    1) "st" -e connmanctl;;
+    1)
+    case "$NET_BACKEND" in
+        connman) st -e connmanctl ;;
+        nm) st -e nmtui ;;
+        iw) st -e iwctl ;;
+        *) dunstify "Network" "No backend found" ;;
+    esac
+    ;;
+
     2) dunstify --urgency=low "Network Info" \
-		"\nLMB: Launch your network configuration UI.\n\nRMB: Show more info about network and interface device.\n\nMMB: Show this help.\n\nScroll: Cycle through the following views:\n→ Connection indicator and wifi signal strength.\n→ Incoming and Outgoing data transfer.\n→ Local IP.\n";;
+		"\nLMB: Launch $NET_BACKEND ctl.\n\nRMB: Show more info about network and interface device.\n\nMMB: Show this help.\n\nScroll: Cycle through the following views:\n→ Connection indicator and wifi signal strength.\n→ Incoming and Outgoing data transfer.\n→ Local IP.\n";;
+
     3)
+	case "$NET_BACKEND" in
+
+	    connman)	
         info="$(connmanctl services 2>/dev/null)"
-        connected="$(printf "%s\n" "$info" | grep -E '^\*A')"
+	connected="$(printf "%s\n" "$info" | grep -E '^\*.*[OR]')"
 
         if [ -n "$connected" ]; then
             ssid="$(printf "%s\n" "$connected" | awk '{print $2}')"
@@ -31,19 +61,129 @@ case $BLOCK_BUTTON in
             dunstify -r 9991 -i network-wireless \
                 "Connected" \
                 "$type\nSSID: $ssid\nDevice: $device"
-        else
-            scan="$(connmanctl scan wifi >/dev/null 2>&1; connmanctl services)"
-            networks="$(printf "%s\n" "$scan" \
-                | grep wifi \
-                | sed 's/^\s*//g' \
-                | sed 's/ wifi_.*$//' \
-                | head -n 10)"
+	else
+	    # Check if WiFi exists and is powered
+	    wifi_powered="$(connmanctl technologies 2>/dev/null \
+        | awk '/Type = wifi/{f=1} f && /Powered =/{print $3; exit}')"
 
-            dunstify -i network-wireless-disconnected \
-                "📡 Available Networks" \
-                "$networks"
-        fi
+	    if [ "$wifi_powered" = "True" ]; then
+		dunstify --urgency=normal "Network" "Scanning WiFi networks..."
+
+		scan="$(connmanctl scan wifi >/dev/null 2>&1; connmanctl services)"
+
+		networks="$(printf "%s\n" "$scan" \
+            	| grep wifi \
+            	| sed 's/^\s*//g' \
+            	| sed 's/ wifi_.*$//' \
+            	| head -n 10)"
+
+		[ -z "$networks" ] && networks="No networks found"
+
+		dunstify -i network-wireless-disconnected \
+			 "📡 Available Networks" \
+			 "$networks"
+	    else
+		dunstify "Network" "WiFi not available or disabled"
+	    fi
+	fi
         ;;
+
+	    nm)
+
+		eth_iface="$(nmcli -t -f DEVICE,TYPE,STATE dev \
+        	| awk -F: '$2=="ethernet" && $3=="connected"{print $1}')"
+
+		if [ -n "$eth_iface" ]; then
+		    dunstify -r 9991 "Connected" \
+			     "🖧 Ethernet\nDevice: $eth_iface"
+		else
+		    ssid="$(nmcli -t -f active,ssid dev wifi | grep '^yes' | cut -d: -f2)"
+		    device="$(nmcli -t -f DEVICE,STATE dev | grep ':connected' | cut -d: -f1)"
+
+		    if [ -n "$ssid" ]; then
+			dunstify -r 9991 "Connected" \
+			     " WiFi\nSSID: $ssid\nDevice: $device"
+		    else
+	
+	            wifi_state="$(nmcli -t -f TYPE,STATE dev | grep '^wifi:' | cut -d: -f2)"
+
+		    if [ "$wifi_state" = "enabled" ] || [ "$wifi_state" = "disconnected" ]; then
+			dunstify "Network" "Scanning WiFi networks..."
+
+			networks="$(nmcli -t -f SSID,SIGNAL dev wifi list \
+                	| sed '/^--/d' \
+                	| head -n 10)"
+
+			[ -z "$networks" ] && networks="No networks found"
+
+			dunstify "📡 Available Networks" "$networks"
+		    else
+			dunstify "Network" "WiFi disabled or unavailable"
+		    fi
+		fi
+		fi
+		;;
+
+	    iw)
+		eth_iface="$(for i in /sys/class/net/*; do
+        	    iface="$(basename "$i")"
+       		     [ "$iface" = "lo" ] && continue
+        	     [ -d "$i/wireless" ] && continue
+
+        	     state="$(cat "$i/operstate" 2>/dev/null)"
+
+        	     if [ "$state" = "up" ]; then
+            	     	echo "$iface"
+            	     	break
+        	     elif [ "$state" = "unknown" ]; then
+            	     	  ping -I "$iface" -c 1 -W 1 8.8.8.8 >/dev/null 2>&1 && {
+                	  echo "$iface"
+                	  break
+            		  }
+        		  fi
+    			  done)"
+		        if [ -n "$eth_iface" ]; then
+			    dunstify -r 9991 "Connected" \
+				     "🖧 Ethernet\nDevice: $eth_iface"
+			else
+	     wifi_iface="$(iw dev | awk '$1=="Interface"{print $2; exit}')"
+
+	     if [ -z "$wifi_iface" ]; then
+		 dunstify "Network" "No WiFi interface found"
+	     else
+		 ssid="$(iw dev "$wifi_iface" link | grep SSID | awk '{print $2}')"
+
+		 if [ -n "$ssid" ]; then
+		     dunstify -r 9991 "Connected" \
+			      " WiFi\nSSID: $ssid\nDevice: $wifi_iface"
+		 else
+		     wifi_up="$(ip link show "$wifi_iface" | grep -q 'UP' && echo yes)"
+
+		     if [ "$wifi_up" = "yes" ]; then
+			 dunstify "Network" "Scanning WiFi networks..."
+
+			 networks="$(iw dev "$wifi_iface" scan 2>/dev/null \
+                    	 | grep 'SSID:' \
+                    | sed 's/SSID: //' \
+                    | head -n 10)"
+
+			 [ -z "$networks" ] && networks="No networks found"
+
+			 dunstify "📡 Available Networks" "$networks"
+		     else
+			 dunstify "Network" "WiFi interface down"
+		     fi
+		 fi
+	     fi
+	     fi
+	     ;;
+
+	    *)
+		dunstify "Network" "No backend available"
+		;;
+	esac
+	;;
+
     4) view=$(( (view + 1) % 3 )); echo "$view" > "$STATE_FILE" ;;
     5) view=$(( (view + 2) % 3 )); echo "$view" > "$STATE_FILE" ;;
 esac

@@ -1,7 +1,11 @@
 #!/bin/sh
 
+CHRONY_CMD="$(command -v chronyc 2>/dev/null)"
+chrony_running="$(pgrep -x chronyd)"
+
 STATE_FILE="/tmp/time_block_format"
 [ ! -f "$STATE_FILE" ] && echo 0 > "$STATE_FILE"
+
 fmt="$(cat "$STATE_FILE")"
 
 case $BLOCK_BUTTON in
@@ -13,17 +17,32 @@ case $BLOCK_BUTTON in
         fi
         ;;
 
-    2) dunstify --urgency=low "Time Controls" \
-		"\nLMB: Show time with seconds.\n\nRMB: Sync system clock using chrony.\n\nMMB: Show this help.\n\nScroll: 12/24 hour format.\n";;
+    2)
+	if [ -n "$CHRONY_CMD" ]; then
+            extra="\n\nRMB: Sync system clock using chrony."
+	else
+            extra=""
+	fi
+
+	dunstify --urgency=low "Time Controls" \
+	     "\nLMB: Show time with seconds.$extra\n\nMMB: Show this help.\n\nScroll: 12/24 hour format.\n"
+	;;
     # Right click → sync time via chrony
     3)
+	if [ -z "$CHRONY_CMD" ]; then
+		dunstify "Time Sync" "chrony not installed"
+		exit 0
+	else if [ -z "$chrony_running" ]; then
+		 dunstify "Time Sync" "chronyd not running"
+		 exit 0
+	fi
         dunstify "Time Sync" "Starting sync..."
 
         (
             if sudo chronyc -a makestep >/dev/null 2>&1; then
                 dunstify "Time Sync" "✔ Sync successful"
             else
-                dunstify "Time Sync" "❌ Sync failed"
+                dunstify "Time Sync" "❌ Sync failed! Make sure the current user is able to sudo chronyc -a makestep without a password and the system is connected to the Internet!"
             fi
         ) &
         ;;

@@ -16,6 +16,12 @@ CFLAGS += -Wall -Wpedantic -Wextra -Wswitch-enum
 CFLAGS += $(shell pkg-config --cflags $(LIBS))
 LDLIBS := $(shell pkg-config --libs $(LIBS))
 
+
+WEATHER_BLOCK ?= 1
+
+CFLAGS += -DWEATHER_BLOCK=$(WEATHER_BLOCK)
+
+
 SRCS := $(wildcard $(SRC_DIR)/*.c)
 OBJS := $(subst $(SRC_DIR)/,$(BUILD_DIR)/,$(SRCS:.c=.o))
 
@@ -81,7 +87,7 @@ install: $(BUILD_DIR)/$(BIN)
 	# ansi to pango parser 
 	cp -f scripts/conv_ansi_to_pango.sh $(INSTALL_DIR)/dwm_conv_ansi_to_pango.sh
 	chmod 755 $(INSTALL_DIR)/dwm_conv_ansi_to_pango.sh
-	
+
 
 uninstall:
 	$(PRINTF) "RM" $(INSTALL_DIR)/$(BIN)

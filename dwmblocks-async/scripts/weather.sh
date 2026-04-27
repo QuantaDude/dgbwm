@@ -1,11 +1,37 @@
 #!/bin/sh
 
+# -------- Config --------
+
+CONFIG_FILE="$HOME/.local/share/dgbwm/.config/dgbwm/dgbwmrc"
+
+# Default fallback
+WEATHER_MODE="ip"
+
+# Load config if exists
+[ -f "$CONFIG_FILE" ] && . "$CONFIG_FILE"
+
+# Decide URL
+case "$WEATHER_MODE" in
+    ip)
+        URL="https://wttr.in"
+        ;;
+    location:*)
+        loc="${WEATHER_MODE#location:}"
+        URL="https://wttr.in/$loc"
+        ;;
+    *)
+        URL="https://wttr.in"
+        ;;
+esac
+
+# -------- State --------
+
 STATE_FILE="/tmp/weather_block_view"
 [ ! -f "$STATE_FILE" ] && echo 0 > "$STATE_FILE"
 view="$(cat "$STATE_FILE")"
 
 CACHE_FILE="/tmp/weather_cache"
-CACHE_TIME=300   # seconds (match your dwmblocks interval)
+CACHE_TIME=300
 
 now=$(date +%s)
 
@@ -15,40 +41,45 @@ else
     last=0
 fi
 
-# Refresh only if expired
+# -------- Fetch + Cache --------
+
 if [ $((now - last)) -ge "$CACHE_TIME" ]; then
-    	tmp="$(mktemp)"
-	if curl -s 'https://wttr.in/Noida?format=%c|%t|%f|%h|%w|%C' > "$tmp"; then
-    		mv "$tmp" "$CACHE_FILE"
-	else
-    		rm -f "$tmp"
-	fi
+    tmp="$(mktemp)"
+    if curl -s --max-time 3 "$URL?format=%c|%t|%f|%h|%w|%C" > "$tmp"; then
+        mv "$tmp" "$CACHE_FILE"
+    else
+        rm -f "$tmp"
+    fi
 fi
 
+# -------- Click Actions --------
 
 case $BLOCK_BUTTON in
-    1) dunstify --urgency=low "Weather" "$(curl -s 'https://wttr.in/Noida?0&Q' | dwm_conv_ansi_to_pango.sh)" ;;
-    2) dunstify --urgency=low "Weather Info" \
-		"\nLMB: Show current weather.\n\nRMB: Show day wise forecast.\n\nMMB: Show this help.\n\nScroll: Cycle through the following views:\n→ Temperature.\n→ Feels like temperature and humidity.\n→ Condition and wind speed\n";;
-    3) dunstify --urgency=normal "Weather" "$(curl -s 'https://wttr.in/Noida?Q&F' | dwm_conv_ansi_to_pango.sh)" ;;
-
-    # Scroll up
+    1)
+        dunstify --urgency=low "Weather" \
+        "$(curl -s --max-time 5 "$URL?0&Q" | dwm_conv_ansi_to_pango.sh)"
+        ;;
+    2)
+        dunstify --urgency=low "Weather Info" \
+"\nLMB: Show current weather.\n\nRMB: Show forecast.\n\nMMB: Show this help.\n\nScroll: Cycle views.\n"
+        ;;
+    3)
+        dunstify --urgency=normal "Weather" \
+        "$(curl -s --max-time 5 "$URL?Q&F" | dwm_conv_ansi_to_pango.sh)"
+        ;;
     4)
         view=$(( (view + 1) % 3 ))
         echo "$view" > "$STATE_FILE"
-#        pkill -RTMIN+5 dwmblocks
         ;;
-
-    # Scroll down
     5)
         view=$(( (view + 2) % 3 ))
         echo "$view" > "$STATE_FILE"
- #       pkill -RTMIN+5 dwmblocks
         ;;
 esac
 
-#weather="$(curl -s 'https://wttr.in/Noida?format=%c|%t|%f|%h|%w|%C')"
-weather="$(cat "$CACHE_FILE")"
+# -------- Parse Cached Data --------
+
+weather="$(cat "$CACHE_FILE" 2>/dev/null)"
 
 icon="$(printf "%s" "$weather" | cut -d'|' -f1)"
 temp="$(printf "%s" "$weather" | cut -d'|' -f2)"
@@ -57,7 +88,7 @@ humidity="$(printf "%s" "$weather" | cut -d'|' -f4)"
 wind="$(printf "%s" "$weather" | cut -d'|' -f5)"
 cond="$(printf "%s" "$weather" | cut -d'|' -f6)"
 
-# -------- Views --------
+# -------- Output Views --------
 
 case "$view" in
     0)

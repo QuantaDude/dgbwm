@@ -1,6 +1,14 @@
 #ifndef CONFIG_H
 #define CONFIG_H
+#ifndef WEATHER_BLOCK
+#define WEATHER_BLOCK 0
+#endif
 
+#if WEATHER_BLOCK
+#define WEATHER_BLOCK_ENTRY(X) X("" , "dwm_get_weather.sh", 300, 6)
+#else
+#define WEATHER_BLOCK_ENTRY(X)
+#endif
 // String used to delimit block outputs in the status.
 #define DELIMITER " | "
 
@@ -22,16 +30,9 @@
     X("", "dwm_get_volume.sh", 0, 2) \
     X("", "dwm_get_mic.sh", 0, 3) \
     X("", "dwm_get_internet.sh", 5, 5) \
-    X("" , "dwm_get_weather.sh", 300, 6) \
+    WEATHER_BLOCK_ENTRY(X) \
     X(" ", "dwm_get_date.sh", 60, 7) \
     X("", "dwm_get_time.sh", 30, 8) \
 
-#endif  // CONFIG_H
-   /* X("", "sb-swap", 10, 0)   \
-    X(" ┇ ", "xset -q|grep LED| awk '{ if (substr ($10,5,1) == 1) print \"[RU]\"; else print \"[EN]\"; }'", 0, 1) \	
-      X("", "sb-loadavg", 5, 5) \
-    X("", "sb-mic", 0, 6)     \
-    X("", "sb-record", 0, 7)  \
-    X("", "sb-volume", 0, 8)  \
-    X("", "sb-battery", 5, 9) \
-    */
+#endif 
+

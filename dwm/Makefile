@@ -2,6 +2,11 @@
 # See LICENSE file for copyright and license details.
 
 include config.mk
+TERMINAL ?= st
+BROWSER  ?= qutebrowser
+FM       ?= vifm
+
+CFLAGS += -DTERMINAL=\"$(TERMINAL)\" -DBROWSER=\"$(BROWSER)\" -DFM=\"$(FM)\" -DFM_NEEDS_TERM=\"$(FM_NEEDS_TERM)\"
 
 SRC = drw.c dwm.c util.c
 OBJ = ${SRC:.c=.o}

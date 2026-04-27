@@ -1,4 +1,17 @@
+
 /* See LICENSE file for copyright and license details. */
+#ifndef TERMINAL
+#define TERMINAL "st"
+#endif
+
+#ifndef BROWSER
+#define BROWSER "qutebrowser"
+#endif
+
+#ifndef FM
+#define FM "vifm"
+#endif
+
 /* appearance */
 static const unsigned int borderpx       = 3;   /* border pixel of windows */
 static const unsigned int snap           = 32;  /* snap pixel */
@@ -206,10 +219,18 @@ static const char *dmenucmd[] = {
 	"-sf", selfgcolor,
 	NULL
 };
-static const char *termcmd[]  = { "st", NULL };
-static const char *fmcmd[] = {"st", "vifm", NULL};
+
+static const char *termcmd[]  = { TERMINAL, NULL };
+static const char *fmcmd[] = {
+#ifdef FM_NEEDS_TERM
+    TERMINAL, FM, NULL
+#else
+    FM, NULL
+#endif
+};
+static const char *browcmd[]  = { BROWSER, NULL };
 static const char *flameshot[] = { "flameshot", "gui", NULL };
-static const char *browcmd[] = {"qutebrowser", NULL};
+
 
 static const Key keys[] = {
 	/* modifier                     key            function                argument */
