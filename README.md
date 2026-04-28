@@ -13,7 +13,7 @@ This is my dwm configuration files. Here you'll find:
 - st
 
 ## Dependencies
-Note: On non arch based distros, you'll need to install these by yourself if they aren't already.
+Note: On **non** arch based distros, you'll need to install these by yourself if they aren't already.
 
 - Xlibre or X11 server (duh)
 - libx11
@@ -24,6 +24,7 @@ Note: On non arch based distros, you'll need to install these by yourself if the
 - flameshot (optional, only for screenshots)
 
 ### Fonts required
+On arch based systems the installation script will install these if missing.
 
 - ttf-jetbrains-mono-nerd
 - ttf-nerd-fonts-symbols
@@ -49,6 +50,15 @@ If you want to change some settings after installing, let's say the wallpaper, y
 dgbwm-config
 ```
 You'll need to place your wallpapers in $HOME/.local/share/dgbwm/
+
+## Status Bar
+
+Each block in the status bar has 3 to 4 block specific actions, press middle mouse to find out about each.
+Each block's output can be cycled through by scrolling over them.
+
+## Keybinds
+
+(details coming soon)
 
 ## Other wonderful software to use along
 
