@@ -170,7 +170,6 @@ choose_program() {
         i=$((i+1))
     done
 
-    # Add <other>
     echo "  $i) <other>" >&2
     other_index=$i
 
@@ -207,7 +206,7 @@ case "$DISTRO" in
         ARCH_BASED=1
         ;;
     *)
-        # fallback: if pacman exists, it's *probably* arch-based
+        #if pacman exists, it's probably arch-based
         if command -v pacman >/dev/null 2>&1; then
             ARCH_BASED=1
         else
@@ -575,7 +574,6 @@ for dir in .config/*; do
     source_dir="$DATA_CONFIG_DIR/$name"
     target="$XDG_CONFIG_HOME/$name"
 
-    # If target exists and is NOT a symlink → ask user
     if [ -e "$target" ] && [ ! -L "$target" ]; then
         echo ""
         echo "[!] Config '$name' already exists at $target"
