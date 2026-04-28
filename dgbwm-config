@@ -1,0 +1,120 @@
+#!/bin/sh
+
+CONFIG="$HOME/.local/share/dgbwm/.config/dgbwm/dgbwmrc"
+
+# -------- Load existing config --------
+[ -f "$CONFIG" ] && . "$CONFIG"
+
+TERMINAL="${TERMINAL:-st}"
+BROWSER="${BROWSER:-firefox}"
+FILE_MANAGER="${FILE_MANAGER:-vifm}"
+MONITOR="${MONITOR:-top}"
+WEATHER_MODE="${WEATHER_MODE:-none}"
+FM_NEEDS_TERM="${FM_NEEDS_TERM:-1}"
+MODE="${MODE:-static}"
+WALLPAPER="${WALLPAPER:-}"
+
+# -------- Helpers (unchanged) --------
+# keep your choose() and choose_wallpaper() here
+
+TERMINALS="st kitty alacritty ghostty konsole"
+BROWSERS="firefox chromium brave qutebrowser librewolf"
+FMS="vifm ranger nnn lf thunar pcmanfm dolphin"
+MONITORS="btop htop top"
+
+# -------- Menu loop --------
+
+while :; do
+    clear
+    echo "==== dgbwm Config ===="
+    echo ""
+    echo "1) Terminal        : $TERMINAL"
+    echo "2) Browser         : $BROWSER"
+    echo "3) File Manager    : $FILE_MANAGER"
+    echo "4) System Monitor  : $MONITOR"
+    echo "5) Wallpaper       : ${WALLPAPER:-none}"
+    echo "6) Weather         : $WEATHER_MODE"
+    echo "7) Mode            : $MODE"
+    echo ""
+    echo "8) Save"
+    echo "9) Exit"
+    echo ""
+
+    printf "Choice: "
+    read choice
+
+    case "$choice" in
+        1)
+            TERMINAL=$(choose "Terminal" "$TERMINAL" $TERMINALS)
+            ;;
+        2)
+            BROWSER=$(choose "Browser" "$BROWSER" $BROWSERS)
+            ;;
+        3)
+            FILE_MANAGER=$(choose "File Manager" "$FILE_MANAGER" $FMS)
+
+            FM_NEEDS_TERM=0
+            case "$FILE_MANAGER" in
+                vifm|ranger|nnn|lf) FM_NEEDS_TERM=1 ;;
+                *)
+                    printf "[?] Does '%s' require terminal? (y/n): " "$FILE_MANAGER"
+                    read ans
+                    [ "$ans" = "y" ] && FM_NEEDS_TERM=1
+                    ;;
+            esac
+            ;;
+        4)
+            MONITOR=$(choose "System Monitor" "$MONITOR" $MONITORS)
+            ;;
+        5)
+            WALLPAPER=$(choose_wallpaper)
+            ;;
+        6)
+            echo ""
+            echo "1) Disable"
+            echo "2) IP-based"
+            echo "3) Location-based"
+            printf "Choice: "
+            read w
+
+            case "$w" in
+                1) WEATHER_MODE="none" ;;
+                2) WEATHER_MODE="ip" ;;
+                3)
+                    printf "Enter location: "
+                    read loc
+                    WEATHER_MODE="location:$loc"
+                    ;;
+            esac
+            ;;
+        7)
+            if [ "$MODE" = "static" ]; then
+                MODE="dynamic"
+            else
+                MODE="static"
+            fi
+            ;;
+        8)
+            mkdir -p "$(dirname "$CONFIG")"
+
+            cat > "$CONFIG" <<EOF
+MODE=$MODE
+TERMINAL=$TERMINAL
+BROWSER=$BROWSER
+FILE_MANAGER=$FILE_MANAGER
+FM_NEEDS_TERM=$FM_NEEDS_TERM
+MONITOR=$MONITOR
+WEATHER_MODE=$WEATHER_MODE
+WALLPAPER=$WALLPAPER
+EOF
+
+            echo "[✓] Saved."
+            sleep 1
+            pkill -RTMIN+1 dwmblocks 2>/dev/null
+            ;;
+        9)
+            echo "Exit without saving."
+            exit 0
+            ;;
+    esac
+done

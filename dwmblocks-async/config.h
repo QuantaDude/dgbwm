@@ -4,8 +4,28 @@
 #define WEATHER_BLOCK 0
 #endif
 
+#ifndef DYNAMIC
+#define DYNAMIC 0
+#endif
+
+#if DYNAMIC
+#define MEM_CMD MEM_SH "auto auto"
+#define NET_CMD NET_SH "auto auto"
+#else
+#ifndef RES_MONITOR
+#define RES_MONITOR "top"
+#endif
+
+#ifndef TERMINAL
+#define TERMINAL "st"
+#endif
+
+#define MEM_CMD MEM_SH RES_MONITOR " " TERMINAL
+#define NET_CMD NET_SH " " "auto" " " TERMINAL //the network backend is decided at runtime in script 
+#endif
+
 #if WEATHER_BLOCK
-#define WEATHER_BLOCK_ENTRY(X) X("" , "dwm_get_weather.sh", 300, 6)
+#define WEATHER_BLOCK_ENTRY(X) X("" , WETH_SH, 300, 6)
 #else
 #define WEATHER_BLOCK_ENTRY(X)
 #endif
@@ -26,13 +46,13 @@
 
 // Define blocks for the status feed as X(icon, cmd, interval, signal).
 #define BLOCKS(X) \
-    X("" , "dwm_get_memory.sh", 10, 1) \
-    X("", "dwm_get_volume.sh", 0, 2) \
-    X("", "dwm_get_mic.sh", 0, 3) \
-    X("", "dwm_get_internet.sh", 5, 5) \
+    X("" , MEM_CMD, 10, 1) \
+    X("", VOL_SH , 0, 2) \
+    X("", MIC_SH, 0, 3) \
+    X("", NET_CMD, 5, 5) \
     WEATHER_BLOCK_ENTRY(X) \
-    X(" ", "dwm_get_date.sh", 60, 7) \
-    X("", "dwm_get_time.sh", 30, 8) \
+    X(" ", DATE_SH, 60, 7) \
+    X("", TIME_SH, 30, 8) \
 
 #endif 
 

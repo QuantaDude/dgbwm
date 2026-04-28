@@ -1,6 +1,20 @@
 #!/bin/sh
 
+CONFIG_FILE="$HOME/.local/share/dgbwm/.config/dgbwm/dgbwmrc"
 BACKEND="${1:-auto}"
+TERM_CMD="${2:-auto}"
+
+# -------- Load terminal from config if needed --------
+
+if [ "$TERM_CMD" = "auto" ]; then
+    if [ -f "$CONFIG_FILE" ]; then
+        . "$CONFIG_FILE"
+        TERM_CMD="${TERMINAL:-st}"
+    else
+        TERM_CMD="st"
+    fi
+fi
+
 detect_backend() {
     case "$BACKEND" in
         connman) echo "connman" ;;
@@ -26,12 +40,16 @@ view="$(cat "$STATE_FILE")"
 
 case $BLOCK_BUTTON in
     1)
-    case "$NET_BACKEND" in
-        connman) st -e connmanctl ;;
-        nm) st -e nmtui ;;
-        iw) st -e iwctl ;;
-        *) dunstify "Network" "No backend found" ;;
-    esac
+    if ! command -v "$TERM_CMD" >/dev/null 2>&1; then
+        dunstify --urgency=critical "Error" "$TERM_CMD not found."
+    else
+        case "$NET_BACKEND" in
+            connman) "$TERM_CMD" -e connmanctl ;;
+            nm) "$TERM_CMD" -e nmtui ;;
+            iw) "$TERM_CMD" -e iwctl ;;
+            *) dunstify "Network" "No backend found" ;;
+        esac
+    fi
     ;;
 
     2) dunstify --urgency=low "Network Info" \
@@ -269,7 +287,7 @@ get_speed() {
 
 case "$view" in
     0)
-        printf "%s%s\n" "$neticon" "$vpnicon"
+        printf "%s%s\n" "$neticon"
         ;;
     1)
         ip="$(get_ip)"

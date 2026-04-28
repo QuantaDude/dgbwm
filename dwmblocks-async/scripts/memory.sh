@@ -1,6 +1,21 @@
 #!/bin/sh
 
 MONITOR="${1:-auto}"
+TERM_CMD="${2:-auto}"
+
+CONFIG_FILE="$HOME/.local/share/dgbwm/.config/dgbwm/dgbwmrc"
+
+# -------- Load terminal from config if needed --------
+
+if [ "$TERM_CMD" = "auto" ]; then
+    if [ -f "$CONFIG_FILE" ]; then
+        . "$CONFIG_FILE"
+        TERM_CMD="${TERMINAL:-st}"
+    else
+        TERM_CMD="st"
+    fi
+fi
+# -------- Detect monitor --------
 
 if [ "$MONITOR" = "auto" ]; then
     if command -v btop >/dev/null; then
@@ -12,24 +27,33 @@ if [ "$MONITOR" = "auto" ]; then
     fi
 fi
 
+
 STATE_FILE="/tmp/memory_block_view"
 [ ! -f "$STATE_FILE" ] && echo 0 > "$STATE_FILE"
 view="$(cat "$STATE_FILE")"
 
 case $BLOCK_BUTTON in
-    2) dunstify --urgency=low "Sys Info" \
-		"\nLMB: View which processes are consuming the most RAM.\n\nRMB: Open $MONITOR (resource monitor).\n\nMMB: Show this help.\n\nScroll: Cycle through the following views:\n→ RAM.\n→ CPU.\n→ Swap.\n→ Root FS storage use%.\n";;
-    1) notify-send "Memory hogs" "$(ps axch -o cmd:15,%mem --sort=-%mem | head)" ;;
-  
-    3) setsid -f st -e sh -c "$MONITOR" ;;
-
-    # Scroll up
+    2)
+        dunstify --urgency=low "Sys Info" \
+"\nLMB: View RAM hogs.\n\nRMB: Open $MONITOR.\n\nMMB: Help.\n\nScroll: Cycle views.\n"
+        ;;
+    1)
+        dunstify --urgency=normal "Memory hogs" \
+        "$(ps axch -o cmd:15,%mem --sort=-%mem | head)"
+        ;;
+    3)
+        if ! command -v "$TERM_CMD" >/dev/null 2>&1; then
+            dunstify --urgency=critical "Error" "$TERM_CMD not found." 
+        elif ! command -v "$MONITOR" >/dev/null 2>&1; then
+            dunstify --urgency=critical "Error" "$MONITOR not found." 
+        else
+            setsid -f "$TERM_CMD" -e "$MONITOR"
+        fi
+        ;;
     4)
         view=$(( (view + 1) % 4 ))
         echo "$view" > "$STATE_FILE"
         ;;
-
-    # Scroll down
     5)
         view=$(( (view + 3) % 4 ))
         echo "$view" > "$STATE_FILE"
@@ -40,24 +64,20 @@ esac
 
 case "$view" in
     0)
-        # RAM
         free --mebi | awk 'NR==2 {
             printf "RAM %.2f/%.2fGiB\n", $3/1024, $2/1024
         }'
         ;;
     1)
-        # Swap
         free --mebi | awk 'NR==3 {
             printf "Swap %.2f/%.2fGiB\n", $3/1024, $2/1024
         }'
         ;;
     2)
-        # CPU usage (instant snapshot)
-        cpu="$(top -bn1 | grep "Cpu(s)" | awk '{print 100 - $8}')"
+        cpu="$(top -bn1 | awk '/Cpu/ {print 100 - $8}')"
         printf "CPU %.1f%%\n" "$cpu"
         ;;
     3)
-        # Root filesystem
         df -h / | awk 'NR==2 {
             printf "Root FS: %.0f%%\n", $5
         }'

@@ -4,7 +4,13 @@
 XDG_CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
 XDG_DATA_HOME="${XDG_DATA_HOME:-$HOME/.local/share}"
 
-feh --bg-scale "$XDG_DATA_HOME/dgbwm/wp1.png"
+CONFIG="$XDG_DATA_HOME/dgbwm/.config/dgbwm/dgbwmrc"
+[ -f "$CONFIG" ] && . "$CONFIG"
+
+# Set wallpaper
+if command -v feh >/dev/null 2>&1 && [ -n "$WALLPAPER" ]; then
+    feh --bg-fill "$WALLPAPER" &
+fi
 
 dwmblocks &
 dunst --config "$XDG_CONFIG_HOME/dunst/dunstrc" &

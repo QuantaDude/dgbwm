@@ -31,11 +31,10 @@ case $BLOCK_BUTTON in
     3)
 	if [ -z "$CHRONY_CMD" ]; then
 		dunstify "Time Sync" "chrony not installed"
-		exit 0
-	else if [ -z "$chrony_running" ]; then
+	elif [ -z "$chrony_running" ]; then
 		 dunstify "Time Sync" "chronyd not running"
-		 exit 0
-	fi
+	 else
+
         dunstify "Time Sync" "Starting sync..."
 
         (
@@ -45,6 +44,7 @@ case $BLOCK_BUTTON in
                 dunstify "Time Sync" "❌ Sync failed! Make sure the current user is able to sudo chronyc -a makestep without a password and the system is connected to the Internet!"
             fi
         ) &
+        fi
         ;;
 
     # Scroll up

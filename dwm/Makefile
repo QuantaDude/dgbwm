@@ -2,11 +2,18 @@
 # See LICENSE file for copyright and license details.
 
 include config.mk
-TERMINAL ?= st
+TERM ?= st
 BROWSER  ?= qutebrowser
 FM       ?= vifm
+FM_NEEDS_TERM ?= 0
 
-CFLAGS += -DTERMINAL=\"$(TERMINAL)\" -DBROWSER=\"$(BROWSER)\" -DFM=\"$(FM)\" -DFM_NEEDS_TERM=\"$(FM_NEEDS_TERM)\"
+CFLAGS += -DTERM=\"$(TERMINAL)\" -DBROWSER=\"$(BROWSER)\" -DFM=\"$(FM)\" -DFM_NEEDS_TERM=$(FM_NEEDS_TERM) 
+ifeq ($(DYNAMIC),1)
+CFLAGS += -DDYNAMIC
+endif
+# ifeq ($(FM_NEEDS_TERM), 1)
+# CFLANGS += -DFM_NEEDS_TERM
+# endif
 
 SRC = drw.c dwm.c util.c
 OBJ = ${SRC:.c=.o}

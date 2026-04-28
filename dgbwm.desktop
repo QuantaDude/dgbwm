@@ -1,0 +1,7 @@
+[Desktop Entry]
+Encoding=UTF-8
+Name=DGBWM
+Comment=The Dynamic GruvBox (themed) window manager
+Exec=/usr/local/bin/dgbwm-init
+Icon=dgbwm
+Type=XSession

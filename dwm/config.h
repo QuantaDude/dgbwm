@@ -1,15 +1,42 @@
 
 /* See LICENSE file for copyright and license details. */
-#ifndef TERMINAL
-#define TERMINAL "st"
+
+/* helper for spawning shell commands in the pre dwm-5.0 fashion */
+
+#define SHCMD(cmd) { .v = (const char*[]){ "/bin/sh", "-c", cmd, NULL } }
+
+#define RUN_SCRIPT(name, cmd) \
+    static const char *name[] = { "/bin/sh", "-c", cmd, NULL }
+
+#ifdef DYNAMIC
+
+RUN_SCRIPT(termcmd, "dgbwm-run term");
+RUN_SCRIPT(browcmd, "dgbwm-run browser");
+RUN_SCRIPT(fmcmd,   "dgbwm-run fm");
+
+#else
+
+#ifndef TERM
+#define TERM "st"
 #endif
 
 #ifndef BROWSER
-#define BROWSER "qutebrowser"
+#define BROWSER "firefox"
 #endif
 
 #ifndef FM
 #define FM "vifm"
+#endif
+
+#if FM_NEEDS_TERM
+static const char *fmcmd[] = { TERM, FM, NULL };
+#else
+static const char *fmcmd[] = { FM, NULL };
+#endif
+
+static const char *termcmd[] = { TERM, NULL };
+static const char *browcmd[] = { BROWSER, NULL };
+
 #endif
 
 /* appearance */
@@ -204,8 +231,7 @@ static const Layout layouts[] = {
 	{ MODKEY|ShiftMask,             KEY,      tag,            {.ui = 1 << TAG} }, \
 	{ MODKEY|ControlMask|ShiftMask, KEY,      toggletag,      {.ui = 1 << TAG} },
 
-/* helper for spawning shell commands in the pre dwm-5.0 fashion */
-#define SHCMD(cmd) { .v = (const char*[]){ "/bin/sh", "-c", cmd, NULL } }
+
 
 /* commands */
 static char dmenumon[2] = "0"; /* component of dmenucmd, manipulated in spawn() */
@@ -220,17 +246,8 @@ static const char *dmenucmd[] = {
 	NULL
 };
 
-static const char *termcmd[]  = { TERMINAL, NULL };
-static const char *fmcmd[] = {
-#ifdef FM_NEEDS_TERM
-    TERMINAL, FM, NULL
-#else
-    FM, NULL
-#endif
-};
-static const char *browcmd[]  = { BROWSER, NULL };
-static const char *flameshot[] = { "flameshot", "gui", NULL };
 
+static const char *flameshot[] = { "flameshot", "gui", NULL };
 
 static const Key keys[] = {
 	/* modifier                     key            function                argument */

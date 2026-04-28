@@ -1,0 +1,20 @@
+#!/bin/sh
+
+CONFIG="$HOME/.local/share/dgbwm/.config/dgbwm/dgbwmrc"
+[ -f "$CONFIG" ] && . "$CONFIG"
+
+case "$1" in
+    term)
+        exec "${TERMINAL:-st}"
+        ;;
+    browser)
+        exec "${BROWSER:-firefox}"
+        ;;
+    fm)
+        if [ "${FM_NEEDS_TERM:-0}" -eq 1 ]; then
+            exec "${TERMINAL:-st}" -e "${FILE_MANAGER:-vifm}"
+        else
+            exec "${FILE_MANAGER:-thunar}"
+        fi
+        ;;
+esac

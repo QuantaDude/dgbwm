@@ -16,11 +16,27 @@ CFLAGS += -Wall -Wpedantic -Wextra -Wswitch-enum
 CFLAGS += $(shell pkg-config --cflags $(LIBS))
 LDLIBS := $(shell pkg-config --libs $(LIBS))
 
+MEM_SH := dgbwm_get_memory
+NET_SH := dgbwm_get_internet
+VOL_SH := dgbwm_get_audio_sink
+MIC_SH := dgbwm_get_audio_source
+WETH_SH := dgbwm_get_weather
+TIME_SH := dgbwm_get_time
+DATE_SH := dgbwm_get_date
+
+CFLAGS += -DMEM_SH=\"$(MEM_SH)\" -DNET_SH=\"$(NET_SH)\" -DVOL_SH=\"$(VOL_SH)\" -DMIC_SH=\"$(MIC_SH)\" -DWETH_SH=\"$(WETH_SH)\" -DTIME_SH=\"$(TIME_SH)\" -DDATE_SH=\"$(DATE_SH)\"
 
 WEATHER_BLOCK ?= 1
 
 CFLAGS += -DWEATHER_BLOCK=$(WEATHER_BLOCK)
-
+ifeq ($(DYNAMIC),1)
+    CFLAGS += -DDYNAMIC
+else
+    # Static binary strings
+    CFLAGS += -DTERMINAL=\"$(TERMINAL)\"
+   # CFLAGS += -DFM=\"$(FM)\"
+    CFLAGS += -DRES_MONITOR=\"$(RES_MONITOR)\"
+endif
 
 SRCS := $(wildcard $(SRC_DIR)/*.c)
 OBJS := $(subst $(SRC_DIR)/,$(BUILD_DIR)/,$(SRCS:.c=.o))
@@ -57,32 +73,32 @@ install: $(BUILD_DIR)/$(BIN)
 	$Qinstall -D -m 755 $< $(INSTALL_DIR)/$(BIN)
 
 	# memory
-	cp -f scripts/memory.sh $(INSTALL_DIR)/dwm_get_memory.sh
-	chmod 755 $(INSTALL_DIR)/dwm_get_memory.sh
+	cp -f scripts/memory.sh $(INSTALL_DIR)/$(MEM_SH)
+	chmod 755 $(INSTALL_DIR)/$(MEM_SH)
 
 	# volume
-	cp -f scripts/volume.sh $(INSTALL_DIR)/dwm_get_volume.sh
-	chmod 755 $(INSTALL_DIR)/dwm_get_volume.sh
+	cp -f scripts/volume.sh $(INSTALL_DIR)/$(VOL_SH)
+	chmod 755 $(INSTALL_DIR)/$(VOL_SH)
 
 	# mic
-	cp -f scripts/mic.sh $(INSTALL_DIR)/dwm_get_mic.sh
-	chmod 755 $(INSTALL_DIR)/dwm_get_mic.sh
+	cp -f scripts/mic.sh $(INSTALL_DIR)/$(MIC_SH)
+	chmod 755 $(INSTALL_DIR)/$(MIC_SH)
 
 	# internet
-	cp -f scripts/internet.sh $(INSTALL_DIR)/dwm_get_internet.sh
-	chmod 755 $(INSTALL_DIR)/dwm_get_internet.sh
+	cp -f scripts/internet.sh $(INSTALL_DIR)/$(NET_SH)
+	chmod 755 $(INSTALL_DIR)/$(NET_SH)
 
 	# weather
-	cp -f scripts/weather.sh $(INSTALL_DIR)/dwm_get_weather.sh
-	chmod 755 $(INSTALL_DIR)/dwm_get_weather.sh
+	cp -f scripts/weather.sh $(INSTALL_DIR)/$(WETH_SH)
+	chmod 755 $(INSTALL_DIR)/$(WETH_SH)
 
 	# date
-	cp -f scripts/date.sh $(INSTALL_DIR)/dwm_get_date.sh
-	chmod 755 $(INSTALL_DIR)/dwm_get_date.sh
+	cp -f scripts/date.sh $(INSTALL_DIR)/$(DATE_SH)
+	chmod 755 $(INSTALL_DIR)/$(DATE_SH)
 
 	# time
-	cp -f scripts/time.sh $(INSTALL_DIR)/dwm_get_time.sh
-	chmod 755 $(INSTALL_DIR)/dwm_get_time.sh
+	cp -f scripts/time.sh $(INSTALL_DIR)/$(TIME_SH)
+	chmod 755 $(INSTALL_DIR)/$(TIME_SH)
 
 	# ansi to pango parser 
 	cp -f scripts/conv_ansi_to_pango.sh $(INSTALL_DIR)/dwm_conv_ansi_to_pango.sh
@@ -93,13 +109,13 @@ uninstall:
 	$(PRINTF) "RM" $(INSTALL_DIR)/$(BIN)
 	$Q$(RM) $(INSTALL_DIR)/$(BIN)
 
-	rm -f $(INSTALL_DIR)/dwm_get_memory.sh
-	rm -f $(INSTALL_DIR)/dwm_get_volume.sh
-	rm -f $(INSTALL_DIR)/dwm_get_mic.sh
-	rm -f $(INSTALL_DIR)/dwm_get_internet.sh
-	rm -f $(INSTALL_DIR)/dwm_get_weather.sh
-	rm -f $(INSTALL_DIR)/dwm_get_date.sh
-	rm -f $(INSTALL_DIR)/dwm_get_time.sh
+	rm -f $(INSTALL_DIR)/$(MEM_SH)
+	rm -f $(INSTALL_DIR)/$(VOL_SH)
+	rm -f $(INSTALL_DIR)/$(MIC_SH)
+	rm -f $(INSTALL_DIR)/$(NET_SH)
+	rm -f $(INSTALL_DIR)/$(WETH_SH)
+	rm -f $(INSTALL_DIR)/$(DATE_SH)
+	rm -f $(INSTALL_DIR)/$(TIME_SH)
 	rm -f $(INSTALL_DIR)/dwm_conv_ansi_to_pango.sh
 
 .PHONY: all clean install uninstall
