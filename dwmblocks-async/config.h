@@ -10,8 +10,8 @@
 #endif
 
 #if DYNAMIC
-#define MEM_CMD MEM_SH "auto auto"
-#define NET_CMD NET_SH "auto auto"
+#define MEM_CMD MEM_SH " auto auto"
+#define NET_CMD NET_SH " auto auto"
 #else
 #ifndef RES_MONITOR
 #define RES_MONITOR "top"

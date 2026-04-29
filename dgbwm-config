@@ -14,14 +14,153 @@ FM_NEEDS_TERM="${FM_NEEDS_TERM:-1}"
 MODE="${MODE:-static}"
 WALLPAPER="${WALLPAPER:-}"
 
-# -------- Helpers (unchanged) --------
-# keep your choose() and choose_wallpaper() here
-
+OLD_MODE="$MODE"
+OLD_WALLPAPER="$WALLPAPER"
 TERMINALS="st kitty alacritty ghostty konsole"
 BROWSERS="firefox chromium brave qutebrowser librewolf"
 FMS="vifm ranger nnn lf thunar pcmanfm dolphin"
 MONITORS="btop htop top"
 
+# --- helpers ----
+
+detect_programs() {
+    found=""
+    for prog in $1; do
+        if command -v "$prog" >/dev/null 2>&1; then
+            found="$found $prog"
+        fi
+    done
+    echo "$found"
+}
+
+validate_exec() {
+    if command -v "$1" >/dev/null 2>&1; then
+        return 0
+    else
+        echo "[!] '$1' not found in PATH" >&2
+        return 1
+    fi
+}
+
+choose() {
+    category="$1"
+    default="$2"
+    shift 2
+
+    options="$@"
+
+    if [ -z "$options" ]; then
+    echo "[!] No known programs found for $category" >&2
+    while :; do
+        printf "Enter executable manually: " >&2
+        read manual
+        if validate_exec "$manual"; then
+            echo "$manual"
+            return
+        fi
+    done
+fi
+
+    # Add previous choice if not in list
+    found_prev=0
+    for p in $options; do
+        [ "$p" = "$default" ] && found_prev=1
+    done
+
+    if [ -n "$default" ] && [ "$found_prev" -eq 0 ]; then
+        options="$default $options"
+    fi
+
+    echo "" >&2
+    echo "[*] Select $category:" >&2
+
+    i=1
+    default_index=1
+
+    for prog in $options; do
+        echo "  $i) $prog" >&2
+        eval "opt_$i=\"$prog\""
+
+        [ "$prog" = "$default" ] && default_index=$i
+
+        i=$((i+1))
+    done
+
+    echo "  $i) <other>" >&2
+    other_index=$i
+
+    printf "Choice [default %d]: " "$default_index" >&2
+    read choice
+
+    # default on empty
+    [ -z "$choice" ] && choice=$default_index
+    case "$choice" in
+        ''|*[!0-9]*)
+            echo "$default"
+            return
+            ;;
+    esac
+
+    if [ "$choice" -lt 1 ] || [ "$choice" -gt "$other_index" ]; then
+        echo "$default"
+        return
+    fi
+    
+    if [ "$choice" -eq "$other_index" ]; then
+        while :; do
+            printf "Enter executable name: " >&2
+            read manual
+
+            if validate_exec "$manual"; then
+                echo "$manual"
+                return
+            fi
+        done
+    fi
+
+    eval "echo \"\$opt_$choice\""
+}
+
+choose_wallpaper() {
+    DIR="$HOME/.local/share/dgbwm/wallpapers/"
+
+    files=$(find "$DIR" -type f \( \
+        -iname "*.png" -o \
+        -iname "*.jpg" -o \
+        -iname "*.jpeg" -o \
+        -iname "*.bmp" -o \
+        -iname "*.gif" -o \
+        -iname "*.webp" -o \
+        -iname "*.tiff" \
+    \))
+
+    if [ -z "$files" ]; then
+        echo "[!] No wallpapers found in $DIR" >&2
+        echo "$WALLPAPER"
+        return
+    fi
+
+    echo "" >&2
+    echo "[*] Select wallpaper (current: ${WALLPAPER:-none})" >&2
+
+    i=1
+    for f in $files; do
+        name=$(basename "$f")
+        echo "  $i) $name" >&2
+        eval "wp_$i=\"$f\""
+        i=$((i+1))
+    done
+
+    printf "Choice [Enter to keep current]: " >&2
+    read choice
+
+    if [ -z "$choice" ]; then
+        echo "$WALLPAPER"
+        return
+    fi
+
+    eval "echo \$wp_$choice"
+}
 # -------- Menu loop --------
 
 while :; do
@@ -45,14 +184,13 @@ while :; do
 
     case "$choice" in
         1)
-            TERMINAL=$(choose "Terminal" "$TERMINAL" $TERMINALS)
+            TERMINAL=$(choose "Terminal" "$TERMINAL" $(detect_programs "$TERMINALS"))
             ;;
         2)
-            BROWSER=$(choose "Browser" "$BROWSER" $BROWSERS)
+            BROWSER=$(choose "Browser" "$BROWSER" $(detect_programs "$BROWSERS")) 
             ;;
         3)
-            FILE_MANAGER=$(choose "File Manager" "$FILE_MANAGER" $FMS)
-
+            FILE_MANAGER=$(choose "File Manager" "$FILE_MANAGER" $(detect_programs "$FMS"))
             FM_NEEDS_TERM=0
             case "$FILE_MANAGER" in
                 vifm|ranger|nnn|lf) FM_NEEDS_TERM=1 ;;
@@ -64,8 +202,8 @@ while :; do
             esac
             ;;
         4)
-            MONITOR=$(choose "System Monitor" "$MONITOR" $MONITORS)
-            ;;
+            MONITOR=$(choose "System Monitor" "$MONITOR" $(detect_programs "$MONITORS"))
+        ;;
         5)
             WALLPAPER=$(choose_wallpaper)
             ;;
@@ -97,7 +235,7 @@ while :; do
         8)
             mkdir -p "$(dirname "$CONFIG")"
 
-            cat > "$CONFIG" <<EOF
+cat > "$CONFIG" <<EOF
 MODE=$MODE
 TERMINAL=$TERMINAL
 BROWSER=$BROWSER
@@ -109,8 +247,61 @@ WALLPAPER=$WALLPAPER
 EOF
 
             echo "[✓] Saved."
+
+            if [ "$MODE" != "$OLD_MODE" ]; then
+                echo "[*] Mode changed → rebuilding dwm and dwmblocks..."
+
+                SRC="$HOME/.local/share/dgbwm"
+
+                if [ "$WEATHER_MODE" = "none" ]; then
+                    WEATHER_BLOCK=0
+                else
+                    WEATHER_BLOCK=1
+                fi
+
+                if find /sys/class/power_supply -maxdepth 1 -name 'BAT*' | grep -q .; then
+                    IS_LAPTOP=1
+                else
+                    IS_LAPTOP=0
+                fi
+
+                if [ "$MODE" = "dynamic" ]; then
+                    (cd "$SRC/dwm" && sudo make clean DYNAMIC=1 install && sudo make clean)
+                    (cd "$SRC/dwmblocks-async" && sudo make clean \
+                    DYNAMIC=1 \
+                    WEATHER_BLOCK=$WEATHER_BLOCK \
+                    IS_LAPTOP=$IS_LAPTOP \
+                    install && sudo make clean)
+                else
+                    (cd "$SRC/dwm" && sudo make clean \
+                    TERMINAL="$TERMINAL" \
+                    BROWSER="$BROWSER" \
+                    FM="$FILE_MANAGER" \
+                    FM_NEEDS_TERM=$FM_NEEDS_TERM \
+                    DYNAMIC=0 \
+                    install && sudo make clean)
+
+                    (cd "$SRC/dwmblocks-async" && sudo make clean \
+                    TERMINAL="$TERMINAL" \
+                    RES_MONITOR="$MONITOR" \
+                    WEATHER_BLOCK=$WEATHER_BLOCK \
+                    IS_LAPTOP=$IS_LAPTOP \
+                    install && sudo make clean)
+                fi
+
+            echo "[✓] Rebuild complete"
             sleep 1
-            pkill -RTMIN+1 dwmblocks 2>/dev/null
+            killall dwm
+            sleep 1
+            exec dwm &
+            killall dwmblocks
+            sleep 1
+            exec dwmblocks &
+            fi
+
+            if [ "$WALLPAPER" != "$OLD_WALLPAPER" ]; then
+                feh --bg-fill $WALLPAPER
+            fi        
             ;;
         9)
             exit 0

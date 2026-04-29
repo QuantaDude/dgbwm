@@ -49,7 +49,9 @@ If you want to change some settings after installing, let's say the wallpaper, y
 ```bash
 dgbwm-config
 ```
-You'll need to place your wallpapers in $HOME/.local/share/dgbwm/
+You'll need to place your wallpapers in $HOME/.local/share/dgbwm/wallpapers/
+
+- If you want to make changes to the keybinds, or make additional changes to the DWM or dwmblocks source code, apply patches to them, you should do so in the ``~/.local/share/dgbwm`` directory instead of the location you cloned this repository in. This is because dgbwm-config reads the ~/.local/ directory to rebuild dwm and dwmblocks incase you change the mode setting.
 
 ## Status Bar
 

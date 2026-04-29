@@ -145,6 +145,18 @@ choose_program() {
 
     options="$@"
 
+    if [ -z "$options" ]; then
+    echo "[!] No known programs found for $category" >&2
+    while :; do
+        printf "Enter executable manually: " >&2
+        read manual
+        if validate_exec "$manual"; then
+            echo "$manual"
+            return
+        fi
+    done
+fi
+
     # Add previous choice if not in list
     found_prev=0
     for p in $options; do
@@ -178,7 +190,18 @@ choose_program() {
 
     # default on empty
     [ -z "$choice" ] && choice=$default_index
+    case "$choice" in
+        ''|*[!0-9]*)
+            echo "$default"
+            return
+            ;;
+    esac
 
+    if [ "$choice" -lt 1 ] || [ "$choice" -gt "$other_index" ]; then
+        echo "$default"
+        return
+    fi
+    
     if [ "$choice" -eq "$other_index" ]; then
         while :; do
             printf "Enter executable name: " >&2
@@ -193,7 +216,6 @@ choose_program() {
 
     eval "echo \"\$opt_$choice\""
 }
-
 IS_LAPTOP=0
 
 if find /sys/class/power_supply -maxdepth 1 -name 'BAT*' | grep -q .; then
@@ -259,8 +281,8 @@ fi
 if [ -n "$missing_pkgs$missing_fonts" ]; then
     echo ""
 
-    case "$DISTRO $DISTRO_LIKE" in
-        *arch*)
+    case $ARCH_BASED in
+        1)
             printf "[?] Install missing components? (y/n): "
             read ans
 
@@ -279,7 +301,7 @@ if [ -n "$missing_pkgs$missing_fonts" ]; then
                 exit 1
             fi
             ;;
-        *)
+        0)
             echo "[!] Install missing items manually."
             exit 1
             ;;
@@ -296,7 +318,8 @@ DATA_CONFIG_DIR="$XDG_DATA_HOME/dgbwm/.config"
 
 mkdir -p "$DATA_CONFIG_DIR/dgbwm"
 
-CONFIG_FILE="$DATA_CONFIG_DIR/dgbwm/dgbwmrc"
+DEST="$XDG_DATA_HOME/dgbwm"
+CONFIG_FILE="$DEST/.config/dgbwm/dgbwmrc"
 
 [ -f "$CONFIG_FILE" ] && . "$CONFIG_FILE"
 
@@ -308,16 +331,126 @@ if [ "$HAS_CONFIG" -eq 0 ]; then
     choose_optional_install "$missing_optional"
 fi
 
-# --- Copy assets (.config files, wallpapers, scripts, etc.) ---
-echo "[*] Copying assets..."
-cp -r wp1.png wp2.png dgbwm-init dgbwm-run "$XDG_DATA_HOME/dgbwm/"
-echo "[*] Succesfully copied assets to $XDG_DATA_HOME/dgbwm/"
 
-echo "[*] Copying configs into data dir..."
-cp -r .config/* "$DATA_CONFIG_DIR/"
+timestamp="$(date +%Y%m%d_%H%M%S)"
+
+backup_tree_if_different() {
+    name="$1"              # dwm / st / dwmblocks-async
+    src_dir="./$name"
+    dst_dir="$DEST/$name"
+
+    [ ! -d "$src_dir" ] && return
+    [ ! -d "$dst_dir" ] && return
+
+    # detect any difference
+if diff -qr \
+    --exclude="*.o" \
+    --exclude="*.a" \
+    --exclude="*.so" \
+    --exclude="*.out" \
+    --exclude="*.tar*" \
+    --exclude="build" \
+    --exclude="dwm" \
+    --exclude="st" \
+    --exclude="dwmblocks" \
+    "$src_dir" "$dst_dir" >/dev/null 2>&1
+then
+    return 0
+fi
+
+    backup_dir="$DEST/${name}.bak.$timestamp"
+
+    echo "[*] Changes detected in $name → backing up to $backup_dir"
+
+    mkdir -p "$backup_dir"
+    # copy entire existing tree (user-modified version)
+    cp -r "$dst_dir"/. "$backup_dir/"
+}
+
+
+# --- Copy DGBWM to .local/share ---
+
+echo "[*] Copying entire project to data dir..."
+
+SRC="$(realpath .)"
+DEST_REAL="$(realpath "$DEST" 2>/dev/null || echo "$DEST")"
+
+if [ "$SRC" = "$DEST_REAL" ]; then
+    echo "[*] Already inside $DEST, skipping copy"
+else
+    mkdir -p "$DEST"
+
+    # --- Backup if modified ---
+    timestamp="$(date +%Y%m%d_%H%M%S)"
+
+    backup_tree_if_different() {
+        name="$1"
+        src_dir="./$name"
+        dst_dir="$DEST/$name"
+
+        [ ! -d "$src_dir" ] && return 0
+        [ ! -d "$dst_dir" ] && return 0
+
+        # ignore binaries/build junk
+        if diff -qr \
+            --exclude="*.o" \
+            --exclude="*.out" \
+            --exclude="*.log" \
+            --exclude="*.tar*" \
+            "$src_dir" "$dst_dir" >/dev/null 2>&1
+        then
+            return 0
+        fi
+
+        backup_dir="$DEST/${name}.bak.$timestamp"
+
+        echo "[*] Changes detected in $name → backing up to $backup_dir"
+
+        mkdir -p "$backup_dir"
+
+        # safe copy (handles hidden files too)
+        cp -r "$dst_dir"/. "$backup_dir/"
+    }
+
+    backup_tree_if_different "dwm"
+    backup_tree_if_different "dwmblocks-async"
+    backup_tree_if_different "st"
+
+    # --- Copy files (non-destructive update) ---
+    for f in .* *; do
+        case "$f" in
+            .|..) continue ;;
+            .git|build) continue ;;
+        esac
+
+        # preserve user config if exists
+        if [ -f "$CONFIG_FILE" ] && [ "$f" = ".config" ]; then
+            echo "[*] Preserving existing .config"
+            continue
+        fi
+
+        find "$DEST" -type f \( \
+            -name "*.o" -o \
+            -name "dwm" -o \
+            -name "st" -o \
+            -name "dwmblocks" \
+            \) \
+            ! -path "$DEST/*.bak.*/*" \
+            ! -path "$DEST/.config/*" \
+            -delete 2>/dev/null
+        
+        cp -r "$f" "$DEST/"
+    done
+fi
+
+echo "[*] Copy complete"
+cd "$DEST" || {
+    echo "[!] Failed to enter $DEST"
+    exit 1
+}
 
 choose_wallpaper() {
-    DIR="$HOME/.local/share/dgbwm"
+    DIR="$HOME/.local/share/dgbwm/wallpapers/"
 
     files=$(find "$DIR" -type f \( \
         -iname "*.png" -o \
@@ -430,6 +563,7 @@ echo "[*] Selected terminal: $terminal"
 if [ "$INSTALL_ST" -eq 1 ]; then
     echo "[*] Installing st..."
     cd st && sudo make clean install
+    sudo make clean
     cd ..
 else
     echo "[*] Skipping st installation"
@@ -460,6 +594,7 @@ cd dwm
 
 if [ "$MODE" = "dynamic" ]; then
     sudo make clean DYNAMIC=1 install
+    sudo make clean
 else
     sudo make clean \
         TERMINAL="$terminal" \
@@ -468,6 +603,7 @@ else
         FM_NEEDS_TERM=$FM_NEEDS_TERM \
         DYNAMIC=0 \
         install
+    sudo make clean
 fi
 
 
@@ -507,6 +643,7 @@ cd dwmblocks-async
 
 if [ "$MODE" = "dynamic" ]; then
     sudo make clean DYNAMIC=1 WEATHER_BLOCK=$WEATHER_BLOCK IS_LAPTOP=$IS_LAPTOP install
+    sudo make clean
 else
     sudo make clean \
         TERMINAL="$terminal" \
@@ -514,12 +651,12 @@ else
         WEATHER_BLOCK=$WEATHER_BLOCK \
         IS_LAPTOP=$IS_LAPTOP \
         install
+    sudo make clean
 fi
 
 
 echo "[*] Installing dunst..."
-cd ../dunst && sudo make clean install
-
+cd ../dunst && sudo make clean install && sudo make clean
 cd ..
 
 echo ""
