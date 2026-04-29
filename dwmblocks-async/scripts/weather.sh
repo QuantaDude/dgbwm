@@ -10,6 +10,8 @@ WEATHER_MODE="ip"
 # Load config if exists
 [ -f "$CONFIG_FILE" ] && . "$CONFIG_FILE"
 
+[ "$WEATHER_MODE" = "none" ] && exit 0
+
 # Decide URL
 case "$WEATHER_MODE" in
     ip)

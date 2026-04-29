@@ -298,11 +298,11 @@ static const Key keys[] = {
 	{ MODKEY|ShiftMask,             XK_period,     tagmon,                 {.i = +1 } },
 	
 	/* custom  */
-	{ 0, XF86XK_AudioMute, spawn, SHCMD("pactl set-sink-mute 0 toggle; pkill -RTMIN+2 dwmblocks") },
-	{ 0, XF86XK_AudioLowerVolume, spawn, SHCMD("pactl set-sink-volume 0 -3%; pkill -RTMIN+2 dwmblocks") },
-	{ 0, XF86XK_AudioRaiseVolume, spawn, SHCMD("pactl set-sink-volume 0 +3%; pkill -RTMIN+2 dwmblocks") },
-	{ 0,                            XF86XK_MonBrightnessUp,     spawn,          SHCMD("brightnessctl g +5%") },
-	{ 0,                            XF86XK_MonBrightnessDown,   spawn,          SHCMD("brightnessctl g 5%-") },
+	{ 0, XF86XK_AudioMute, spawn, SHCMD("pactl set-sink-mute 0 toggle; pkill -RTMIN+3 dwmblocks") },
+	{ 0, XF86XK_AudioLowerVolume, spawn, SHCMD("pactl set-sink-volume 0 -3%; pkill -RTMIN+3 dwmblocks") },
+	{ 0, XF86XK_AudioRaiseVolume, spawn, SHCMD("pactl set-sink-volume 0 +3%; pkill -RTMIN+3 dwmblocks") },
+	{ 0,                            XF86XK_MonBrightnessUp,     spawn,          SHCMD("brightnessctl --device=* s +5%") },
+	{ 0,                            XF86XK_MonBrightnessDown,   spawn,          SHCMD("brightnessctl --device=* s 5%-") },
 	{ 0,                            XK_Print,                   spawn,          {.v = flameshot} },
 	{ 0,                            XK_ISO_Next_Group,          spawn,          SHCMD("pkill -RTMIN+10 dwmblocks") },
 

@@ -194,6 +194,12 @@ choose_program() {
     eval "echo \"\$opt_$choice\""
 }
 
+IS_LAPTOP=0
+
+if find /sys/class/power_supply -maxdepth 1 -name 'BAT*' | grep -q .; then
+    IS_LAPTOP=1
+    echo "[*] Laptop detected"
+fi
 # -- Detect Distro ---
 
 detect_distro
@@ -459,7 +465,8 @@ else
         TERMINAL="$terminal" \
         BROWSER="$browser" \
         FM="$fm" \
-        FM_NEEDS_TERM="$FM_NEEDS_TERM" \
+        FM_NEEDS_TERM=$FM_NEEDS_TERM \
+        DYNAMIC=0 \
         install
 fi
 
@@ -467,37 +474,30 @@ fi
 echo "[*] Installing dwmblocks..."
 echo ""
 
-if [ "$HAS_CONFIG" -eq 1 ]; then
-    echo "[*] Weather configuration (current: $WEATHER_MODE)"
-    printf "Change it? (y/n, Enter to keep): "
-    read ans
+echo "[*] Weather configuration (current: ${WEATHER_MODE:-none})"
 
-    if [ -z "$ans" ]; then
-        :
-    elif [ "$ans" = "y" ]; then
-        change_weather=1
-    else
-        change_weather=0
-    fi
+echo "  1) Disable"
+echo "  2) IP-based"
+echo "  3) Location-based"
+printf "Choice [Enter to keep current]: "
+read wchoice
+
+if [ -z "$wchoice" ]; then
+    :
 else
-    printf "[*] Enable weather block? (y/n): "
-    read ans
-    [ "$ans" = "y" ] && change_weather=1 || change_weather=0
-fi
-
-if [ "$change_weather" = "1" ]; then
-    echo "  1) IP-based"
-    echo "  2) Location-based"
-    printf "Choice: "
-    read wchoice
-
-    if [ "$wchoice" = "1" ]; then
-        WEATHER_MODE="ip"
-    else
-        printf "Enter location: "
-        read loc
-        WEATHER_MODE="location:$loc"
-    fi
+    case "$wchoice" in
+        1)
+            WEATHER_MODE="none"
+            ;;
+        2)
+            WEATHER_MODE="ip"
+            ;;
+        3)
+            printf "Enter location (e.g.: Delhi, or West_Delhi or XYZ_CITY_NAME): "
+            read loc
+            WEATHER_MODE="location:$loc"
+            ;;
+    esac
 fi
 
 [ "$WEATHER_MODE" = "none" ] && WEATHER_BLOCK=0 || WEATHER_BLOCK=1
@@ -506,15 +506,16 @@ cd ..
 cd dwmblocks-async
 
 if [ "$MODE" = "dynamic" ]; then
-    sudo make clean DYNAMIC=1 install
+    sudo make clean DYNAMIC=1 WEATHER_BLOCK=$WEATHER_BLOCK IS_LAPTOP=$IS_LAPTOP install
 else
     sudo make clean \
         TERMINAL="$terminal" \
-        RES_MONITOR="$monitor" \
+        RES_MONITOR="$res_monitor" \
+        WEATHER_BLOCK=$WEATHER_BLOCK \
+        IS_LAPTOP=$IS_LAPTOP \
         install
 fi
 
-# cd ../dwmblocks-async && sudo make clean TERMINAL="$terminal" RES_MONITOR="$res_monitor" WEATHER_BLOCK="$WEATHER_BLOCK" install
 
 echo "[*] Installing dunst..."
 cd ../dunst && sudo make clean install

@@ -1,11 +1,12 @@
 #ifndef CONFIG_H
 #define CONFIG_H
-#ifndef WEATHER_BLOCK
-#define WEATHER_BLOCK 0
-#endif
 
 #ifndef DYNAMIC
 #define DYNAMIC 0
+#endif
+
+#ifndef IS_LAPTOP
+#define IS_LAPTOP 0
 #endif
 
 #if DYNAMIC
@@ -20,14 +21,22 @@
 #define TERMINAL "st"
 #endif
 
-#define MEM_CMD MEM_SH RES_MONITOR " " TERMINAL
-#define NET_CMD NET_SH " " "auto" " " TERMINAL //the network backend is decided at runtime in script 
+
+#define MEM_CMD MEM_SH " " RES_MONITOR " " TERMINAL
+#define NET_CMD NET_SH " auto " TERMINAL//the network backend is decided at runtime in script 
+
 #endif
 
 #if WEATHER_BLOCK
 #define WEATHER_BLOCK_ENTRY(X) X("" , WETH_SH, 300, 6)
 #else
 #define WEATHER_BLOCK_ENTRY(X)
+#endif
+
+#if IS_LAPTOP
+#define BAT_BLOCK_ENTRY(X) X("", BAT_SH, 5, 1)
+#else
+#define BAT_BLOCK_ENTRY(X)
 #endif
 // String used to delimit block outputs in the status.
 #define DELIMITER " | "
@@ -46,9 +55,10 @@
 
 // Define blocks for the status feed as X(icon, cmd, interval, signal).
 #define BLOCKS(X) \
-    X("" , MEM_CMD, 10, 1) \
-    X("", VOL_SH , 0, 2) \
-    X("", MIC_SH, 0, 3) \
+    BAT_BLOCK_ENTRY(X) \
+    X("" , MEM_CMD, 10, 2) \
+    X("", VOL_SH , 0, 3) \
+    X("", MIC_SH, 0, 4) \
     X("", NET_CMD, 5, 5) \
     WEATHER_BLOCK_ENTRY(X) \
     X(" ", DATE_SH, 60, 7) \

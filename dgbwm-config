@@ -113,7 +113,6 @@ EOF
             pkill -RTMIN+1 dwmblocks 2>/dev/null
             ;;
         9)
-            echo "Exit without saving."
             exit 0
             ;;
     esac

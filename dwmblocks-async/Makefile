@@ -16,6 +16,7 @@ CFLAGS += -Wall -Wpedantic -Wextra -Wswitch-enum
 CFLAGS += $(shell pkg-config --cflags $(LIBS))
 LDLIBS := $(shell pkg-config --libs $(LIBS))
 
+BAT_SH := dgbwm_get_battery
 MEM_SH := dgbwm_get_memory
 NET_SH := dgbwm_get_internet
 VOL_SH := dgbwm_get_audio_sink
@@ -24,13 +25,22 @@ WETH_SH := dgbwm_get_weather
 TIME_SH := dgbwm_get_time
 DATE_SH := dgbwm_get_date
 
-CFLAGS += -DMEM_SH=\"$(MEM_SH)\" -DNET_SH=\"$(NET_SH)\" -DVOL_SH=\"$(VOL_SH)\" -DMIC_SH=\"$(MIC_SH)\" -DWETH_SH=\"$(WETH_SH)\" -DTIME_SH=\"$(TIME_SH)\" -DDATE_SH=\"$(DATE_SH)\"
+CFLAGS += -DMEM_SH=\"$(MEM_SH)\" -DNET_SH=\"$(NET_SH)\" -DVOL_SH=\"$(VOL_SH)\" -DMIC_SH=\"$(MIC_SH)\" -DWETH_SH=\"$(WETH_SH)\" -DTIME_SH=\"$(TIME_SH)\" -DDATE_SH=\"$(DATE_SH)\" -DBAT_SH=\"$(BAT_SH)\"
 
-WEATHER_BLOCK ?= 1
+ifeq ($(WEATHER_BLOCK),1)
+	CFLAGS += -DWEATHER_BLOCK=1
+else
+	CFLAGS += -DWEATHER_BLOCK=0
+endif
 
-CFLAGS += -DWEATHER_BLOCK=$(WEATHER_BLOCK)
+ifeq ($(IS_LAPTOP),1)
+	CFLAGS += -DIS_LAPTOP=1
+else
+  CFLAGS += -DIS_LAPTOP=0
+endif
+
 ifeq ($(DYNAMIC),1)
-    CFLAGS += -DDYNAMIC
+    CFLAGS += -DDYNAMIC=1
 else
     # Static binary strings
     CFLAGS += -DTERMINAL=\"$(TERMINAL)\"
@@ -72,6 +82,10 @@ install: $(BUILD_DIR)/$(BIN)
 	$(PRINTF) "INSTALL" $(INSTALL_DIR)/$(BIN)
 	$Qinstall -D -m 755 $< $(INSTALL_DIR)/$(BIN)
 
+	# battery
+	cp -f scripts/battery.sh $(INSTALL_DIR)/$(BAT_SH)
+	chmod 755 $(INSTALL_DIR)/$(BAT_SH)
+
 	# memory
 	cp -f scripts/memory.sh $(INSTALL_DIR)/$(MEM_SH)
 	chmod 755 $(INSTALL_DIR)/$(MEM_SH)
@@ -109,6 +123,7 @@ uninstall:
 	$(PRINTF) "RM" $(INSTALL_DIR)/$(BIN)
 	$Q$(RM) $(INSTALL_DIR)/$(BIN)
 
+	rm -f $(INSTALL_DIR)/$(BAT_SH)
 	rm -f $(INSTALL_DIR)/$(MEM_SH)
 	rm -f $(INSTALL_DIR)/$(VOL_SH)
 	rm -f $(INSTALL_DIR)/$(MIC_SH)
