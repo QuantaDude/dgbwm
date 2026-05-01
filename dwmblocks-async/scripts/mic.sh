@@ -12,6 +12,42 @@ get_info() {
     pactl list sources | grep -E "Name:|Description:|Volume:|Mute:"
 }
 
+if [ "$1" = "--listen" ]; then
+    get_mic_port() {
+        pactl list sources | awk '
+            /Active Port:/ {print $3; exit}
+        '
+    }
+
+    prev_port="$(get_mic_port)"
+
+    pactl subscribe | while read -r line; do
+        case "$line" in
+            *"on source"*|*"on card"*)
+                curr_port="$(get_mic_port)"
+
+                if [ "$curr_port" != "$prev_port" ]; then
+                    case "$curr_port" in
+                        *headset*|*headphone*)
+                            dunstify -u normal "Microphone" "Headset mic active 🎧"
+                            ;;
+                        *internal*|*analog*)
+                            dunstify -u normal "Microphone" "Internal mic active 🎙"
+                            ;;
+                        *)
+                            dunstify -u normal "Microphone" "Mic route changed: $curr_port"
+                            ;;
+                    esac
+
+                    prev_port="$curr_port"
+                    pkill -RTMIN+3 dwmblocks 2>/dev/null
+                fi
+                ;;
+        esac
+    done
+    exit 0
+fi
+
 case $BLOCK_BUTTON in
     1) toggle_mic;;   # left click → toggle
     2) dunstify --urgency=low "Mic Info" \

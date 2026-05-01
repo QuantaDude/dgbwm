@@ -8,6 +8,8 @@ nnoremap <f5> :copy<cr>
 nnoremap <f6> :move<cr>
 nnoremap <f8> :delete<cr>
 
+filetype * xdg-open > /dev/null 2>&1 &
+
 nnoremap S :sort<cr>
 set syscalls
 set dotfiles

@@ -1,5 +1,21 @@
 #!/bin/sh
 
+if [ "$1" = "--listen" ]; then
+    update_battery > /dev/null  # initialize cache
+
+    udevadm monitor --udev --subsystem-match=power_supply | while read -r line; do
+        case "$line" in
+            *"power_supply"*)
+                sleep 0.3  # debounce burst
+
+                update_battery > /dev/null
+                pkill -RTMIN+1 dwmblocks 2>/dev/null
+                ;;
+        esac
+    done
+    exit 0
+fi
+
 BAT_LIST=$(find /sys/class/power_supply -maxdepth 1 -name 'BAT*' | sort)
 [ -z "$BAT_LIST" ] && exit 0
 
@@ -48,41 +64,66 @@ set_brightness_if_needed() {
     fi
 }
 
-icon="$(get_icon)"
+update_battery() {
+    BAT_LIST=$(find /sys/class/power_supply -maxdepth 1 -name 'BAT*' | sort)
+    [ -z "$BAT_LIST" ] && return
 
-STATE_CACHE="/tmp/battery_status_cache"
-LOW_CACHE="/tmp/battery_low_cache"
+    BAT_COUNT=$(printf "%s\n" "$BAT_LIST" | wc -l)
 
-curr_key="$(basename "$BAT_DIR"):$STATUS"
-prev_key=""
-[ -f "$STATE_CACHE" ] && prev_key="$(cat "$STATE_CACHE")"
+    STATE_FILE="/tmp/battery_block_idx"
+    [ ! -f "$STATE_FILE" ] && echo 0 > "$STATE_FILE"
+    idx="$(cat "$STATE_FILE")"
+    [ "$idx" -ge "$BAT_COUNT" ] && idx=0
 
-if [ "$curr_key" != "$prev_key" ]; then
-    case "$STATUS" in
-        Charging)
-            dunstify -u low "Battery" "⚡ Charging ($CAPACITY%)"
-            ;;
-        Discharging)
-            dunstify -u low "Battery" "🔋 Discharging ($CAPACITY%)"
-            set_brightness_if_needed
-            ;;
-        Full)
-            dunstify -u low "Battery" "🔌 Fully charged"
-            ;;
-    esac
-    echo "$curr_key" > "$STATE_CACHE"
-fi
+    BAT_DIR=$(printf "%s\n" "$BAT_LIST" | sed -n "$((idx+1))p")
 
-LOW_THRESHOLD=15
+    CAPACITY="$(cat "$BAT_DIR/capacity" 2>/dev/null)"
+    STATUS="$(cat "$BAT_DIR/status" 2>/dev/null)"
 
-if [ "$STATUS" = "Discharging" ] && [ "$CAPACITY" -le "$LOW_THRESHOLD" ]; then
-    if [ ! -f "$LOW_CACHE" ]; then
-        dunstify -u critical "Battery Low" " $CAPACITY% remaining!"
-        touch "$LOW_CACHE"
+    STATE_CACHE="/tmp/battery_status_cache"
+    LOW_CACHE="/tmp/battery_low_cache"
+
+    curr_key="$(basename "$BAT_DIR"):$STATUS"
+    prev_key=""
+    [ -f "$STATE_CACHE" ] && prev_key="$(cat "$STATE_CACHE")"
+
+    if [ "$curr_key" != "$prev_key" ]; then
+        case "$STATUS" in
+            Charging)
+                dunstify -u low "Battery" "⚡ Charging ($CAPACITY%)"
+                ;;
+            Discharging)
+                dunstify -u low "Battery" "🔋 Discharging ($CAPACITY%)"
+                set_brightness_if_needed
+                ;;
+            Full)
+                dunstify -u low "Battery" "🔌 Fully charged"
+                ;;
+        esac
+
+        echo "$curr_key" > "$STATE_CACHE"
     fi
-else
-    rm -f "$LOW_CACHE"
-fi
+
+    LOW_THRESHOLD=15
+    if [ "$STATUS" = "Discharging" ] && [ "$CAPACITY" -le "$LOW_THRESHOLD" ]; then
+        if [ ! -f "$LOW_CACHE" ]; then
+            dunstify -u critical "Battery Low" " $CAPACITY% remaining!"
+            touch "$LOW_CACHE"
+        fi
+    else
+        rm -f "$LOW_CACHE"
+    fi
+
+    icon="$(get_icon)"
+
+    if [ "$BAT_COUNT" -gt 1 ]; then
+        prefix="BAT $((idx+1)): "
+    else
+        prefix=""
+    fi
+
+    printf "%s%s %s%%\n" "$prefix" "$icon" "$CAPACITY"
+}
 
 case $BLOCK_BUTTON in
     1)
@@ -122,10 +163,4 @@ case $BLOCK_BUTTON in
         ;;
 esac
 
-if [ "$BAT_COUNT" -gt 1 ]; then
-    prefix="BAT $((idx+1)): "
-else
-    prefix=""
-fi
-
-printf "%s%s %s%%\n" "$prefix" "$icon" "$CAPACITY"
+update_battery 

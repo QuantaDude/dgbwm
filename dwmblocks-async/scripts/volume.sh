@@ -1,5 +1,10 @@
 #!/bin/sh
 
+
+update_bar() {
+    pkill -RTMIN+3 dwmblocks 2>/dev/null
+}
+
 get_vol() {
     pactl get-sink-volume @DEFAULT_SINK@ | awk '{print $5}'
 }
@@ -7,6 +12,42 @@ get_vol() {
 is_muted() {
     pactl get-sink-mute @DEFAULT_SINK@ | awk '{print $2}'
 }
+
+if [ "$1" = "--listen" ]; then
+    get_port() {
+        pactl list sinks | awk '
+            /Active Port:/ {print $3; exit}
+        '
+    }
+
+    prev_port="$(get_port)"
+
+    pactl subscribe | while read -r line; do
+        case "$line" in
+            *"on sink"*|*"on card"*)
+                curr_port="$(get_port)"
+
+                if [ "$curr_port" != "$prev_port" ]; then
+                    case "$curr_port" in
+                        *headphones*)
+                            dunstify -u normal "Audio" "Headphones connected 🎧"
+                            ;;
+                        *speaker*)
+                            dunstify -u normal "Audio" "Switched to speakers 🔊"
+                            ;;
+                        *)
+                            dunstify -u normal "Audio" "Audio route changed: $curr_port"
+                            ;;
+                    esac
+
+                    prev_port="$curr_port"
+                    pkill -RTMIN+4 dwmblocks 2>/dev/null
+                fi
+                ;;
+        esac
+    done
+    exit 0
+fi
 
 case $BLOCK_BUTTON in
  2) dunstify --urgency=low "Audio Controls" \

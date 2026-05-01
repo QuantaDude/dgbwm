@@ -1,20 +1,73 @@
 #!/bin/sh
+XDG_CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
+XDG_DATA_HOME="${XDG_DATA_HOME:-$HOME/.local/share}"
 
-CONFIG="$HOME/.local/share/dgbwm/.config/dgbwm/dgbwmrc"
+CONFIG="$XDG_DATA_HOME/dgbwm/.config/dgbwm/dgbwmrc"
 [ -f "$CONFIG" ] && . "$CONFIG"
+
+: "${TERMINAL:=sh}"
+: "${BROWSER:=firefox}"
+: "${FILE_MANAGER:=vifm}"
+: "${EDITOR:=vim}"
+
+run() {
+    [ -z "$1" ] && {
+        echo "Error: command is empty"
+        exit 127
+    }
+    command -v "$1" >/dev/null 2>&1 || {
+        echo "Error: command not found: $1"
+        exit 127
+    }
+    "$@"
+    exit
+}
+
+# detect override: if $2 is a valid command, use it
+pick_cmd() {
+    if [ -n "$2" ] && command -v "$2" >/dev/null 2>&1; then
+        echo "$2"
+    else
+        echo "$1"
+    fi
+}
 
 case "$1" in
     term)
-        exec "${TERMINAL:-st}"
+        cmd="$(pick_cmd "$TERMINAL" "$2")"
+        run "$cmd"
         ;;
+
     browser)
-        exec "${BROWSER:-firefox}"
+        cmd="$(pick_cmd "$BROWSER" "$2")"
+        shift 2
+        run "$cmd" "$@"
         ;;
+
     fm)
+        cmd="$(pick_cmd "$FILE_MANAGER" "$2")"
+        if [ "$cmd" = "$2" ]; then shift 2; else shift 1; fi
+
         if [ "${FM_NEEDS_TERM:-0}" -eq 1 ]; then
-            exec "${TERMINAL:-st}" -e "${FILE_MANAGER:-vifm}"
+            run "$TERMINAL" -e "$cmd" "$@"
         else
-            exec "${FILE_MANAGER:-thunar}"
+            run "$cmd" "$@"
         fi
+        ;;
+
+    editor)
+        cmd="$(pick_cmd "$EDITOR" "$2")"
+        if [ "$cmd" = "$2" ]; then shift 2; else shift 1; fi
+
+        if [ "${ED_NEEDS_TERM:-0}" -eq 1 ]; then
+            run "$TERMINAL" -e "$cmd" "$@"
+        else
+            run "$cmd" "$@"
+        fi
+        ;;
+
+    *)
+        echo "Usage: dgbwm-run {term|browser|fm|editor} [command] [args...]"
+        exit 1
         ;;
 esac

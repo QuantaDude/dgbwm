@@ -1,125 +1,37 @@
 #!/bin/sh
 
-CONFIG="$HOME/.local/share/dgbwm/.config/dgbwm/dgbwmrc"
+XDG_CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
+XDG_DATA_HOME="${XDG_DATA_HOME:-$HOME/.local/share}"
 
+CONFIG="$XDG_DATA_HOME/dgbwm/.config/dgbwm/dgbwmrc"
+
+DGBWM_LIB="$XDG_DATA_HOME/dgbwm/dgbwm-utils.sh"
+
+[ -f "$DGBWM_LIB" ] && . "$DGBWM_LIB"
 # -------- Load existing config --------
 [ -f "$CONFIG" ] && . "$CONFIG"
 
-TERMINAL="${TERMINAL:-st}"
-BROWSER="${BROWSER:-firefox}"
-FILE_MANAGER="${FILE_MANAGER:-vifm}"
-MONITOR="${MONITOR:-top}"
+TERMINAL="${TERMINAL:-}"
+BROWSER="${BROWSER:-}"
+FILE_MANAGER="${FILE_MANAGER:-}"
+EDITOR="${EDITOR:-}"
+ED_NEEDS_TERM="${ED_NEEDS_TERM:-}"
+MONITOR="${MONITOR:-}"
 WEATHER_MODE="${WEATHER_MODE:-none}"
-FM_NEEDS_TERM="${FM_NEEDS_TERM:-1}"
-MODE="${MODE:-static}"
+FM_NEEDS_TERM="${FM_NEEDS_TERM:-}"
+MODE="${MODE:-}"
 WALLPAPER="${WALLPAPER:-}"
 
 OLD_MODE="$MODE"
 OLD_WALLPAPER="$WALLPAPER"
+OLD_EDITOR="${EDITOR}"
 TERMINALS="st kitty alacritty ghostty konsole"
 BROWSERS="firefox chromium brave qutebrowser librewolf"
 FMS="vifm ranger nnn lf thunar pcmanfm dolphin"
 MONITORS="btop htop top"
+EDITORS="vim nvim emacs helix micro ed kate"
 
 # --- helpers ----
-
-detect_programs() {
-    found=""
-    for prog in $1; do
-        if command -v "$prog" >/dev/null 2>&1; then
-            found="$found $prog"
-        fi
-    done
-    echo "$found"
-}
-
-validate_exec() {
-    if command -v "$1" >/dev/null 2>&1; then
-        return 0
-    else
-        echo "[!] '$1' not found in PATH" >&2
-        return 1
-    fi
-}
-
-choose() {
-    category="$1"
-    default="$2"
-    shift 2
-
-    options="$@"
-
-    if [ -z "$options" ]; then
-    echo "[!] No known programs found for $category" >&2
-    while :; do
-        printf "Enter executable manually: " >&2
-        read manual
-        if validate_exec "$manual"; then
-            echo "$manual"
-            return
-        fi
-    done
-fi
-
-    # Add previous choice if not in list
-    found_prev=0
-    for p in $options; do
-        [ "$p" = "$default" ] && found_prev=1
-    done
-
-    if [ -n "$default" ] && [ "$found_prev" -eq 0 ]; then
-        options="$default $options"
-    fi
-
-    echo "" >&2
-    echo "[*] Select $category:" >&2
-
-    i=1
-    default_index=1
-
-    for prog in $options; do
-        echo "  $i) $prog" >&2
-        eval "opt_$i=\"$prog\""
-
-        [ "$prog" = "$default" ] && default_index=$i
-
-        i=$((i+1))
-    done
-
-    echo "  $i) <other>" >&2
-    other_index=$i
-
-    printf "Choice [default %d]: " "$default_index" >&2
-    read choice
-
-    # default on empty
-    [ -z "$choice" ] && choice=$default_index
-    case "$choice" in
-        ''|*[!0-9]*)
-            echo "$default"
-            return
-            ;;
-    esac
-
-    if [ "$choice" -lt 1 ] || [ "$choice" -gt "$other_index" ]; then
-        echo "$default"
-        return
-    fi
-    
-    if [ "$choice" -eq "$other_index" ]; then
-        while :; do
-            printf "Enter executable name: " >&2
-            read manual
-
-            if validate_exec "$manual"; then
-                echo "$manual"
-                return
-            fi
-        done
-    fi
-
-    eval "echo \"\$opt_$choice\""
-}
 
 choose_wallpaper() {
     DIR="$HOME/.local/share/dgbwm/wallpapers/"
@@ -171,12 +83,13 @@ while :; do
     echo "2) Browser         : $BROWSER"
     echo "3) File Manager    : $FILE_MANAGER"
     echo "4) System Monitor  : $MONITOR"
-    echo "5) Wallpaper       : ${WALLPAPER:-none}"
-    echo "6) Weather         : $WEATHER_MODE"
-    echo "7) Mode            : $MODE"
+    echo "5) Editor          : $EDITOR"
+    echo "6) Wallpaper       : ${WALLPAPER:-none}"
+    echo "7) Weather         : $WEATHER_MODE"
+    echo "8) Mode            : $MODE"
     echo ""
-    echo "8) Save"
-    echo "9) Exit"
+    echo "9) Save"
+    echo "10) Exit"
     echo ""
 
     printf "Choice: "
@@ -184,30 +97,66 @@ while :; do
 
     case "$choice" in
         1)
-            TERMINAL=$(choose "Terminal" "$TERMINAL" $(detect_programs "$TERMINALS"))
+            TERMINAL=$(choose_program "Terminal" "$TERMINAL" $(detect_programs "$TERMINALS"))
             ;;
         2)
-            BROWSER=$(choose "Browser" "$BROWSER" $(detect_programs "$BROWSERS")) 
+            BROWSER=$(choose_program "Browser" "$BROWSER" $(detect_programs "$BROWSERS")) 
             ;;
         3)
-            FILE_MANAGER=$(choose "File Manager" "$FILE_MANAGER" $(detect_programs "$FMS"))
+            FILE_MANAGER=$(choose_program "File Manager" "$FILE_MANAGER" $(detect_programs "$FMS"))
+
+            fm_desktop=$(get_desktop_file "$FILE_MANAGER")
+
             FM_NEEDS_TERM=0
-            case "$FILE_MANAGER" in
-                vifm|ranger|nnn|lf) FM_NEEDS_TERM=1 ;;
-                *)
-                    printf "[?] Does '%s' require terminal? (y/n): " "$FILE_MANAGER"
+
+            if [ -n "$fm_desktop" ]; then
+                term_flag=$(get_terminal_requirement "$fm_desktop")
+
+                if [ "$term_flag" = "1" ] || [ "$term_flag" = "0" ]; then
+                    FM_NEEDS_TERM=$term_flag
+                fi
+
+                xdg-mime default "$fm_desktop" inode/directory
+                xdg-mime default "$fm_desktop" x-scheme-handler/file
+                xdg-mime default "$fm_desktop" "text/vnd.typst"
+
+            else
+                printf "[?] Does '%s' require terminal? (y/n): " "$FILE_MANAGER"
                     read ans
-                    [ "$ans" = "y" ] && FM_NEEDS_TERM=1
-                    ;;
-            esac
+                [ "$ans" = "y" ] && FM_NEEDS_TERM=1
+            fi
             ;;
         4)
-            MONITOR=$(choose "System Monitor" "$MONITOR" $(detect_programs "$MONITORS"))
+            MONITOR=$(choose_program "System Monitor" "$MONITOR" $(detect_programs "$MONITORS"))
         ;;
         5)
+            EDITOR=$(choose_program "Editor" "$EDITOR" $(detect_programs "$EDITORS"))
+
+            editor_desktop=$(get_desktop_file "$EDITOR")
+
+            ED_NEEDS_TERM=0
+
+            if [ -n "$editor_desktop" ]; then
+                term_flag=$(get_terminal_requirement "$editor_desktop")
+
+                if [ "$term_flag" = "1" ] || [ "$term_flag" = "0" ]; then
+                    ED_NEEDS_TERM=$term_flag
+                fi
+
+                set_mime_from_desktop "$editor_desktop" "text/"
+                xdg-mime default "$editor_desktop" text/plain
+
+            else
+            printf "[?] Does '%s' require terminal? (y/n): " "$EDITOR"
+            read ans
+            [ "$ans" = "y" ] && ED_NEEDS_TERM=1
+            fi
+        ;;
+
+        6)
             WALLPAPER=$(choose_wallpaper)
             ;;
-        6)
+        7)
             echo ""
             echo "1) Disable"
             echo "2) IP-based"
@@ -225,14 +174,14 @@ while :; do
                     ;;
             esac
             ;;
-        7)
+        8)
             if [ "$MODE" = "static" ]; then
                 MODE="dynamic"
             else
                 MODE="static"
             fi
             ;;
-        8)
+        9)
             mkdir -p "$(dirname "$CONFIG")"
 
 cat > "$CONFIG" <<EOF
@@ -241,9 +190,12 @@ TERMINAL=$TERMINAL
 BROWSER=$BROWSER
 FILE_MANAGER=$FILE_MANAGER
 FM_NEEDS_TERM=$FM_NEEDS_TERM
+EDITOR=$EDITOR
+ED_NEEDS_TERM=$ED_NEEDS_TERM
 MONITOR=$MONITOR
 WEATHER_MODE=$WEATHER_MODE
 WALLPAPER=$WALLPAPER
+IS_LAPTOP=$IS_LAPTOP
 EOF
 
             echo "[✓] Saved."
@@ -251,7 +203,7 @@ EOF
             if [ "$MODE" != "$OLD_MODE" ]; then
                 echo "[*] Mode changed → rebuilding dwm and dwmblocks..."
 
-                SRC="$HOME/.local/share/dgbwm"
+                SRC="$XDG_DATA_HOME/dgbwm/"
 
                 if [ "$WEATHER_MODE" = "none" ]; then
                     WEATHER_BLOCK=0
@@ -299,11 +251,20 @@ EOF
             exec dwmblocks &
             fi
 
+            if [ "$EDITOR" != "$OLD_EDITOR" ]; then
+                BASHRC="$HOME/.bashrc"
+
+                sed -i '/^export EDITOR=/d' "$BASHRC"
+                sed -i '/^export VISUAL=/d' "$BASHRC"
+
+                echo "export EDITOR=$EDITOR" >> "$BASHRC"
+                echo "export VISUAL=$EDITOR" >> "$BASHRC"
+            fi
             if [ "$WALLPAPER" != "$OLD_WALLPAPER" ]; then
-                feh --bg-fill $WALLPAPER
+                feh --bg-fill "$WALLPAPER"
             fi        
             ;;
-        9)
+        10)
             exit 0
             ;;
     esac

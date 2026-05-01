@@ -2,7 +2,10 @@
 
 # -------- Config --------
 
-CONFIG_FILE="$HOME/.local/share/dgbwm/.config/dgbwm/dgbwmrc"
+XDG_CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
+XDG_DATA_HOME="${XDG_DATA_HOME:-$HOME/.local/share}"
+
+CONFIG_FILE="$XDG_DATA_HOME/dgbwm/.config/dgbwm/dgbwmrc"
 
 # Default fallback
 WEATHER_MODE="ip"

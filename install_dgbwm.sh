@@ -1,9 +1,120 @@
 #!/bin/sh
 set -e
+# --- XDG fallbacks ---
+XDG_CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
+XDG_DATA_HOME="${XDG_DATA_HOME:-$HOME/.local/share}"
 
-DEPS="feh xorg-server libx11 pango dbus libxrandr libxinerama libxss pod2man ttf-jetbrains-mono-nerd ttf-nerd-fonts-symbols ttf-hack-nerd"
+
+echo "[*] Using:"
+echo "    CONFIG: $XDG_CONFIG_HOME"
+echo "    DATA:   $XDG_DATA_HOME"
+
+# --- Create dirs if missing ---
+mkdir -p "$XDG_CONFIG_HOME"
+mkdir -p "$XDG_DATA_HOME/dgbwm"
+
+DATA_CONFIG_DIR="$XDG_DATA_HOME/dgbwm/.config"
+
+mkdir -p "$DATA_CONFIG_DIR/dgbwm"
+
+DEST="$XDG_DATA_HOME/dgbwm"
+CONFIG_FILE="$DEST/.config/dgbwm/dgbwmrc"
+
+[ -f "$CONFIG_FILE" ] && . "$CONFIG_FILE"
+
+HAS_CONFIG=0
+[ -f "$CONFIG_FILE" ] && HAS_CONFIG=1
+
+# --- Copy DGBWM to .local/share ---
+
+echo "[*] Copying entire project to data dir..."
+
+SRC="$(realpath .)"
+DEST_REAL="$(realpath "$DEST" 2>/dev/null || echo "$DEST")"
+
+if [ "$SRC" = "$DEST_REAL" ]; then
+    echo "[*] Already inside $DEST, skipping copy"
+else
+    mkdir -p "$DEST"
+
+    # --- Backup if modified ---
+    timestamp="$(date +%Y%m%d_%H%M%S)"
+
+    backup_tree_if_different() {
+        name="$1"
+        src_dir="./$name"
+        dst_dir="$DEST/$name"
+
+        [ ! -d "$src_dir" ] && return 0
+        [ ! -d "$dst_dir" ] && return 0
+
+        # ignore binaries/build junk
+        if diff -qr \
+            --exclude="*.o" \
+            --exclude="*.out" \
+            --exclude="*.log" \
+            --exclude="*.tar*" \
+            "$src_dir" "$dst_dir" >/dev/null 2>&1
+        then
+            return 0
+        fi
+
+        backup_dir="$DEST/${name}.bak.$timestamp"
+
+        echo "[*] Changes detected in $name → backing up to $backup_dir"
+
+        mkdir -p "$backup_dir"
+
+        # safe copy (handles hidden files too)
+        cp -r "$dst_dir"/. "$backup_dir/"
+    }
+
+    backup_tree_if_different "dwm"
+    backup_tree_if_different "dwmblocks-async"
+    backup_tree_if_different "st"
+
+    # --- Copy files (non-destructive update) ---
+    for f in .* *; do
+        case "$f" in
+            .|..) continue ;;
+            .git|build) continue ;;
+        esac
+
+        # preserve user config if exists
+        if [ -f "$CONFIG_FILE" ] && [ "$f" = ".config" ]; then
+            echo "[*] Preserving existing .config"
+            continue
+        fi
+
+        find "$DEST" -type f \( \
+            -name "*.o" -o \
+            -name "dwm" -o \
+            -name "st" -o \
+            -name "dwmblocks" \
+            \) \
+            ! -path "$DEST/*.bak.*/*" \
+            ! -path "$DEST/.config/*" \
+            -delete 2>/dev/null
+        
+        cp -r "$f" "$DEST/"
+    done
+fi
+
+echo "[*] Copy complete"
+cd "$DEST" || {
+    echo "[!] Failed to enter $DEST"
+    exit 1
+}
+
+
+
+DGBWM_LIB="$XDG_DATA_HOME/dgbwm/dgbwm-utils.sh"
+
+[ -f "$DGBWM_LIB" ] && . "$DGBWM_LIB"
+
+DEPS="feh xorg-server libx11 pango dbus libxrandr libxinerama libxss xdg-utils pod2man ttf-jetbrains-mono-nerd ttf-nerd-fonts-symbols ttf-hack-nerd"
 FONTS="JetBrainsMono Nerd Font Symbols Nerd Font Hack Nerd Font"
-OPTIONAL_PKGS="flameshot vifm emacs qutebrowser btop"
+OPTIONAL_PKGS="flameshot vifm emacs qutebrowser btop mpv kew"
 
 detect_distro() {
     if [ -f /etc/os-release ]; then
@@ -115,107 +226,14 @@ choose_optional_install() {
 BROWSERS="firefox chromium brave qutebrowser librewolf"
 RES_MONITORS="btop htop top"
 TERMINALS="st kitty ghostty alacritty konsole"
-EDITORS="vim nvim emacs"
 FILE_MANAGERS="vifm thunar pcmanfm ranger nnn lf dolphin"
 TUI_FM="vifm ranger nnn lf"
 
-detect_programs() {
-    found=""
-    for prog in $1; do
-        if command -v "$prog" >/dev/null 2>&1; then
-            found="$found $prog"
-        fi
-    done
-    echo "$found"
-}
+EDITORS="vim nvim emacs helix micro ed kate"
+AUDIO="kew mpv vlc"
+VIDEO="mpv vlc"
 
-validate_exec() {
-    if command -v "$1" >/dev/null 2>&1; then
-        return 0
-    else
-        echo "[!] '$1' not found in PATH" >&2
-        return 1
-    fi
-}
 
-choose_program() {
-    category="$1"
-    default="$2"
-    shift 2
-
-    options="$@"
-
-    if [ -z "$options" ]; then
-    echo "[!] No known programs found for $category" >&2
-    while :; do
-        printf "Enter executable manually: " >&2
-        read manual
-        if validate_exec "$manual"; then
-            echo "$manual"
-            return
-        fi
-    done
-fi
-
-    # Add previous choice if not in list
-    found_prev=0
-    for p in $options; do
-        [ "$p" = "$default" ] && found_prev=1
-    done
-
-    if [ -n "$default" ] && [ "$found_prev" -eq 0 ]; then
-        options="$default $options"
-    fi
-
-    echo "" >&2
-    echo "[*] Select $category:" >&2
-
-    i=1
-    default_index=1
-
-    for prog in $options; do
-        echo "  $i) $prog" >&2
-        eval "opt_$i=\"$prog\""
-
-        [ "$prog" = "$default" ] && default_index=$i
-
-        i=$((i+1))
-    done
-
-    echo "  $i) <other>" >&2
-    other_index=$i
-
-    printf "Choice [default %d]: " "$default_index" >&2
-    read choice
-
-    # default on empty
-    [ -z "$choice" ] && choice=$default_index
-    case "$choice" in
-        ''|*[!0-9]*)
-            echo "$default"
-            return
-            ;;
-    esac
-
-    if [ "$choice" -lt 1 ] || [ "$choice" -gt "$other_index" ]; then
-        echo "$default"
-        return
-    fi
-    
-    if [ "$choice" -eq "$other_index" ]; then
-        while :; do
-            printf "Enter executable name: " >&2
-            read manual
-
-            if validate_exec "$manual"; then
-                echo "$manual"
-                return
-            fi
-        done
-    fi
-
-    eval "echo \"\$opt_$choice\""
-}
 IS_LAPTOP=0
 
 if find /sys/class/power_supply -maxdepth 1 -name 'BAT*' | grep -q .; then
@@ -252,14 +270,7 @@ fi
 
 echo ""
 
-# --- XDG fallbacks ---
-XDG_CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
-XDG_DATA_HOME="${XDG_DATA_HOME:-$HOME/.local/share}"
 
-
-echo "[*] Using:"
-echo "    CONFIG: $XDG_CONFIG_HOME"
-echo "    DATA:   $XDG_DATA_HOME"
 
 # --- Check for missing dependencies ---
 
@@ -310,25 +321,14 @@ fi
 
 
 
-# --- Create dirs if missing ---
-mkdir -p "$XDG_CONFIG_HOME"
-mkdir -p "$XDG_DATA_HOME/dgbwm"
 
-DATA_CONFIG_DIR="$XDG_DATA_HOME/dgbwm/.config"
 
-mkdir -p "$DATA_CONFIG_DIR/dgbwm"
-
-DEST="$XDG_DATA_HOME/dgbwm"
-CONFIG_FILE="$DEST/.config/dgbwm/dgbwmrc"
-
-[ -f "$CONFIG_FILE" ] && . "$CONFIG_FILE"
-
-HAS_CONFIG=0
-[ -f "$CONFIG_FILE" ] && HAS_CONFIG=1
-
+# on first install, prompt the user to install the optional dependencies and assign the default multimedia applications
 if [ "$HAS_CONFIG" -eq 0 ]; then
     missing_optional="$(check_optional_missing)"
     choose_optional_install "$missing_optional"
+
+   
 fi
 
 
@@ -368,86 +368,6 @@ fi
 }
 
 
-# --- Copy DGBWM to .local/share ---
-
-echo "[*] Copying entire project to data dir..."
-
-SRC="$(realpath .)"
-DEST_REAL="$(realpath "$DEST" 2>/dev/null || echo "$DEST")"
-
-if [ "$SRC" = "$DEST_REAL" ]; then
-    echo "[*] Already inside $DEST, skipping copy"
-else
-    mkdir -p "$DEST"
-
-    # --- Backup if modified ---
-    timestamp="$(date +%Y%m%d_%H%M%S)"
-
-    backup_tree_if_different() {
-        name="$1"
-        src_dir="./$name"
-        dst_dir="$DEST/$name"
-
-        [ ! -d "$src_dir" ] && return 0
-        [ ! -d "$dst_dir" ] && return 0
-
-        # ignore binaries/build junk
-        if diff -qr \
-            --exclude="*.o" \
-            --exclude="*.out" \
-            --exclude="*.log" \
-            --exclude="*.tar*" \
-            "$src_dir" "$dst_dir" >/dev/null 2>&1
-        then
-            return 0
-        fi
-
-        backup_dir="$DEST/${name}.bak.$timestamp"
-
-        echo "[*] Changes detected in $name → backing up to $backup_dir"
-
-        mkdir -p "$backup_dir"
-
-        # safe copy (handles hidden files too)
-        cp -r "$dst_dir"/. "$backup_dir/"
-    }
-
-    backup_tree_if_different "dwm"
-    backup_tree_if_different "dwmblocks-async"
-    backup_tree_if_different "st"
-
-    # --- Copy files (non-destructive update) ---
-    for f in .* *; do
-        case "$f" in
-            .|..) continue ;;
-            .git|build) continue ;;
-        esac
-
-        # preserve user config if exists
-        if [ -f "$CONFIG_FILE" ] && [ "$f" = ".config" ]; then
-            echo "[*] Preserving existing .config"
-            continue
-        fi
-
-        find "$DEST" -type f \( \
-            -name "*.o" -o \
-            -name "dwm" -o \
-            -name "st" -o \
-            -name "dwmblocks" \
-            \) \
-            ! -path "$DEST/*.bak.*/*" \
-            ! -path "$DEST/.config/*" \
-            -delete 2>/dev/null
-        
-        cp -r "$f" "$DEST/"
-    done
-fi
-
-echo "[*] Copy complete"
-cd "$DEST" || {
-    echo "[!] Failed to enter $DEST"
-    exit 1
-}
 
 choose_wallpaper() {
     DIR="$HOME/.local/share/dgbwm/wallpapers/"
@@ -491,6 +411,62 @@ choose_wallpaper() {
 }
 
 echo ""
+echo "[*] Choose the text editor"
+echo ""
+
+editor=$(choose_program \
+    "editor" \
+    "$EDITOR" \
+    $(detect_programs "$EDITORS"))
+
+editor_desktop=$(get_desktop_file "$editor")
+ED_NEEDS_TERM=0
+
+if [ -n "$editor_desktop" ]; then
+    echo "[*] Found desktop entry: $editor_desktop"
+
+    term_flag=$(get_terminal_requirement "$editor_desktop")
+
+    if [ -n "$term_flag" ]; then
+        ED_NEEDS_TERM=$term_flag
+        echo "[*] Terminal requirement detected: $ED_NEEDS_TERM"
+    else
+        echo "[!] Could not determine Terminal= from .desktop"
+    fi
+
+    # set default editor for text
+    echo "[*] Setting editor for all supported text MIME types"
+    set_mime_from_desktop "$editor_desktop" "text/"
+    xdg-mime default "$editor_desktop" "text/plain"
+
+
+else
+    echo "[!] No .desktop file found for $editor"
+
+    # fallback: ask user
+    echo ""
+    printf "[?] Does '%s' require a terminal to run? (y/n): " "$editor"
+    read ans
+
+    case "$ans" in
+        y|Y) ED_NEEDS_TERM=1 ;;
+        *)   ED_NEEDS_TERM=0 ;;
+    esac
+fi
+
+echo "[*] ED_NEEDS_TERM=$ED_NEEDS_TERM"
+
+BASHRC="$HOME/.bashrc"
+
+# remove old entries
+sed -i '/^export EDITOR=/d' "$BASHRC"
+sed -i '/^export VISUAL=/d' "$BASHRC"
+
+# add new ones
+echo "export EDITOR=$editor" >> "$BASHRC"
+echo "export VISUAL=$editor" >> "$BASHRC"
+
+echo ""
 echo "[*] Choose the web browser to quick launch using the keybind (Super + F1)"
 echo ""
 browser=$(choose_program \
@@ -498,27 +474,50 @@ browser=$(choose_program \
     "$BROWSER" \
     $(detect_programs "$BROWSERS"))
 
+browser_desktop=$(get_desktop_file "$browser")
+
+if [ -n "$browser_desktop" ]; then
+    echo "[*] setting default xdg web browser desktop entry: $browser_desktop"
+    xdg-settings set default-web-browser $browser_desktop
+    xdg-settings set default-url-scheme-handler https $browser_desktop
+else
+    echo "[!] Could not find .desktop file for $browser."
+fi
+
 echo ""
 echo "[*] Choose the file manager to quick launch using the keybind (Super + F2)"
 echo ""
+
 fm=$(choose_program \
     "file manager" \
     "$FILE_MANAGER" \
     $(detect_programs "$FILE_MANAGERS"))
 
+fm_desktop=$(get_desktop_file "$fm")
+
 FM_NEEDS_TERM=0
-KNOWN=0
 
-for t in $TUI_FM; do
-    if [ "$fm" = "$t" ]; then
-        FM_NEEDS_TERM=1
-        KNOWN=1
-        break
+if [ -n "$fm_desktop" ]; then
+    echo "[*] Found desktop entry: $fm_desktop"
+
+    term_flag=$(get_terminal_requirement "$fm_desktop")
+
+    if [ "$term_flag" = "1" ] || [ "$term_flag" = "0" ]; then
+        FM_NEEDS_TERM=$term_flag
+        echo "[*] Terminal requirement detected: $FM_NEEDS_TERM"
+    else
+        echo "[!] Could not determine Terminal= from .desktop"
     fi
-done
 
-# If unknown → ask user
-if [ "$KNOWN" -eq 0 ]; then
+    # set as default file manager
+    xdg-mime default "$fm_desktop" "inode/directory"
+    xdg-mime default "$fm_desktop" "x-scheme-handler/file"
+    xdg-mime default "$fm_desktop" "text/vnd.typst"
+
+else
+    echo "[!] No .desktop file found for $fm"
+
+    # fallback: ask user
     echo ""
     printf "[?] Does '%s' require a terminal to run? (y/n): " "$fm"
     read ans
@@ -677,12 +676,15 @@ echo "[*] Saving config..."
 cat > "$CONFIG_FILE" <<EOF
 MODE=$MODE
 TERMINAL=$terminal
-FM_NEEDS_TERM=$FM_NEEDS_TERM
 BROWSER=$browser
 FILE_MANAGER=$fm
+FM_NEEDS_TERM=$FM_NEEDS_TERM
+EDITOR=$editor
+ED_NEEDS_TERM=$ED_NEEDS_TERM
 MONITOR=$res_monitor
 WEATHER_MODE=$WEATHER_MODE
 WALLPAPER=$WALLPAPER
+IS_LAPTOP=$IS_LAPTOP
 EOF
 
 # --- Install start script ---
@@ -754,5 +756,87 @@ for dir in .config/*; do
     echo "    Linking $name"
     ln -sf "$source_dir" "$target"
 done
+
+echo "[*] Installing application .desktop files..."
+
+DESKTOP_SRC="./.desktop"
+DESKTOP_DEST="/usr/share/applications"
+
+
+if [ -d "$DESKTOP_SRC" ]; then
+    for file in "$DESKTOP_SRC"/*.desktop; do
+        [ -e "$file" ] || continue
+
+        name=$(basename "$file")
+        cmd="${name%.desktop}"
+
+        if command -v $cmd >/dev/null 2>&1; then
+            echo "    Installing $name → $DESKTOP_DEST"
+            sudo install -Dm644 "$file" "$DESKTOP_DEST/$name"
+        fi
+    done
+
+    if command -v update-desktop-database >/dev/null 2>&1; then
+        sudo update-desktop-database "$DESKTOP_DEST"
+    fi
+else
+    echo "[*] No .desktop directory found, skipping"
+fi
+
+
+if [ "$HAS_CONFIG" -eq 0 ]; then
+    echo ""
+    echo "[*] Setting feh as the default image viewer..."
+
+    set_mime_from_desktop "feh.desktop" "image/"
+
+    echo ""
+
+    echo "[*] Setting default audio player..."
+
+    audio_player=""
+
+    if command -v kew >/dev/null 2>&1; then
+        audio_player="kew"
+    elif command -v mpv >/dev/null 2>&1; then
+        audio_player="mpv"
+    elif command -v vlc >/dev/null 2>&1; then
+        audio_player="vlc"
+    fi
+
+    if [ -n "$audio_player" ]; then
+        audio_desktop=$(get_desktop_file "$audio_player")
+
+        if [ -n "$audio_desktop" ]; then
+            echo "[*] Using $audio_player ($audio_desktop) for all audio types"
+            set_mime_from_desktop "$audio_desktop" "audio/"
+        else
+            echo "not found"
+        fi
+    fi
+
+    echo ""
+    echo "[*] Setting default video player..."
+
+    video_player=""
+
+    if command -v mpv >/dev/null 2>&1; then
+        video_player="mpv"
+    elif command -v vlc >/dev/null 2>&1; then
+        video_player="vlc"
+    fi
+
+    if [ -n "$video_player" ]; then
+        video_desktop=$(get_desktop_file "$video_player")
+
+    if [ -n "$video_desktop" ]; then
+        echo "[*] Using $video_player ($video_desktop) for all video types"
+        set_mime_from_desktop "$video_desktop" "video/"
+    fi
+    
+    fi
+
+fi
+
 
 echo "[✓] Done. Restart X session."

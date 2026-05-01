@@ -15,6 +15,13 @@ fi
 dwmblocks &
 dunst --config "$XDG_CONFIG_HOME/dunst/dunstrc" &
 
+dgbwm_get_audio_sink --listen &
+dgbwm_get_audio_source --listen &
+
+if [ "${IS_LAPTOP:-0}" -eq 1 ]; then
+    dgbwm_get_battery --listen &
+fi
+
 while true; do
         dwm 2>"$HOME/.dwm.log"
 done
