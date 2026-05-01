@@ -2,7 +2,7 @@
 Version=1.0
 Name=Kew Music Player
 Comment=Terminal-based music player
-Exec=kew %F
+Exec=dgbwm-run term-app kew %F
 Terminal=true
 Type=Application
 Categories=Audio;Music;Player;

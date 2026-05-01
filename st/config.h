@@ -10,7 +10,7 @@
 /*static char *font = "Hack Nerd Font:pixelsize=14";*/
 //static char *font = "JetBrainsMono Nerd Font:style=Regular:pixelsize=14:antialias=true:autohint=true";
 
-static char *font = "JetBrainsMono Nerd Font:pixelsize=18:antialias=true:autohint=true,JetBrainsMono NF,JetBrainsMono NF SemiBold:style=SemiBold,Noto Sans Symbols2:pixelsize=18";
+static char *font = "JetBrainsMono Nerd Font:pixelsize=18:antialias=true:autohint=true,JetBrainsMono NF,JetBrainsMono NF SemiBold:style=SemiBold,Noto Emoji:style=Bold, Noto Sans Symbols2:pixelsize=18";
 static int borderpx = 2;
 
 /* How to align the content in the window when the size of the terminal

@@ -60,6 +60,7 @@ static int tiledindicatortype            = INDICATOR_NONE;
 static int floatindicatortype            = INDICATOR_TOP_LEFT_SQUARE;
 static const char *fonts[]               = { 
   "JetBrainsMonoNL NFP:size=13:style=Bold",
+  "Noto Emoji:style=Bold:size=13",
   "Noto Sans Symbols2:size=13"
   /*"Font Awesome 6 Free Solid:size=13"*/
 };

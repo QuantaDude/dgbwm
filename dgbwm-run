@@ -38,6 +38,11 @@ case "$1" in
         run "$cmd"
         ;;
 
+    term-app)
+        cmd="$2"
+        shift 2
+        run "$TERMINAL" -e "$cmd" "$@"
+        ;;
     browser)
         cmd="$(pick_cmd "$BROWSER" "$2")"
         shift 2

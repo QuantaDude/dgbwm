@@ -112,8 +112,14 @@ DGBWM_LIB="$XDG_DATA_HOME/dgbwm/dgbwm-utils.sh"
 
 [ -f "$DGBWM_LIB" ] && . "$DGBWM_LIB"
 
-DEPS="feh xorg-server libx11 pango dbus libxrandr libxinerama libxss xdg-utils pod2man ttf-jetbrains-mono-nerd ttf-nerd-fonts-symbols ttf-hack-nerd"
-FONTS="JetBrainsMono Nerd Font Symbols Nerd Font Hack Nerd Font"
+DEPS="feh xorg-server libx11 pango dbus libxrandr libxinerama libxss xdg-utils pod2man fontconfig xorg-mkfontdir xorg-mkfontscale curl ttf-jetbrains-mono-nerd ttf-hack-nerd"
+
+FONTS="
+JetBrainsMono Nerd Font
+Hack Nerd Font
+Noto Emoji
+"
+
 OPTIONAL_PKGS="flameshot vifm emacs qutebrowser btop mpv kew"
 
 detect_distro() {
@@ -145,11 +151,15 @@ check_deps() {
 check_fonts() {
     missing_fonts=""
 
-    for font in $FONTS; do
-        if ! fc-list | grep -iq "$font"; then
+    while IFS= read -r font; do
+        [ -z "$font" ] && continue
+
+        if ! fc-list : family | grep -iq "$font"; then
             missing_fonts="$missing_fonts [$font]"
         fi
-    done
+    done <<EOF
+$FONTS
+EOF
 
     echo "$missing_fonts"
 }
@@ -221,7 +231,8 @@ choose_optional_install() {
             echo "    (unknown package manager)"
         fi
     fi
-}
+
+    }
 
 BROWSERS="firefox chromium brave qutebrowser librewolf"
 RES_MONITORS="btop htop top"
@@ -306,6 +317,11 @@ if [ -n "$missing_pkgs$missing_fonts" ]; then
                         sudo pacman -S --needed $missing_pkgs
                     fi
                 fi
+            if echo "$missing_fonts" | grep -iq "Noto Emoji"; then
+                echo "[*] Installing Noto Emoji Monochrome font..."
+
+                sh "$DEST/fonts/install-ttf-noto-emoji-mono.sh"
+            fi
 
             else
                 echo "[!] Aborting."

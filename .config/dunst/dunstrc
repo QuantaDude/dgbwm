@@ -1,9 +1,9 @@
 [global]
     follow = keyboard
     width = (0, 1500)
-    height = 950
+    height = (0, 950)
     origin = top-right
-    offset = 48x60
+ offset = (48, 60)
     scale = 0
     notification_limit = 10
     progress_bar = true
@@ -21,11 +21,11 @@
     text_icon_padding = 0
     frame_width = 3
     frame_color = "#aaaaaa"
-    gap_size = 0
+    gap_size = 5
     separator_color = frame
     sort = yes
     idle_threshold = 120
-    font = Hack Nerd Font,Noto Color Emoji,Noto Sans Symbols2 10
+    font = Hack Nerd Font Mono,Noto Emoji:style=Bold 14,Noto Sans Symbols2 14
     line_height = 0
     markup = full
     format = "<b><u>%s</u></b>\n%b\n"
@@ -80,3 +80,4 @@
     foreground = "#ea6962"
     frame_color = "#ea6962"
     timeout = 0
+
