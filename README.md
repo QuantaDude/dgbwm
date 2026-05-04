@@ -1,4 +1,4 @@
-# The Dynamic GruvBox Window Manager
+# The Gruvbox Window Manager
 
 ![Screenshot1](./screenshot1.png)
 
@@ -11,6 +11,14 @@ This is my dwm configuration files. Here you'll find:
 - dwmblocks
 - dunst
 - st
+
+And optional software with their configuration files:
+- kew : terminal music player
+- qutebrowser
+- btop
+- mpv
+- vifm
+- emacs
 
 ## Dependencies
 Note: On **non** arch based distros, you'll need to install these by yourself if they aren't already.
@@ -27,7 +35,7 @@ Note: On **non** arch based distros, you'll need to install these by yourself if
 On arch based systems the installation script will install these if missing.
 
 - ttf-jetbrains-mono-nerd
-- ttf-nerd-fonts-symbols
+- ttf-noto-emoji-monochrome
 - ttf-hack-nerd
 
 ## Installation

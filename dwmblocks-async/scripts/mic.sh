@@ -9,62 +9,93 @@ get_mic() {
 }
 
 get_info() {
-    pactl list sources | grep -E "Name:|Description:|Volume:|Mute:"
+    pactl list sources | grep -E "Name:|Description:|Active Port:|Volume:|Mute:"
 }
 
+# ---- LISTENER MODE ----
 if [ "$1" = "--listen" ]; then
-    get_mic_port() {
-        pactl list sources | awk '
-            /Active Port:/ {print $3; exit}
+
+    get_default_source() {
+        pactl info | awk -F': ' '/Default Source/ {print $2}'
+    }
+
+    get_source_desc() {
+        pactl list sources | awk -v src="$1" '
+            $0 ~ "Name: "src {found=1}
+            found && /Description:/ {sub("Description: ", ""); print; exit}
         '
     }
 
-    prev_port="$(get_mic_port)"
+    get_active_port() {
+        pactl list sources | awk -v src="$1" '
+            $0 ~ "Name: "src {found=1}
+            found && /Active Port:/ {print $3; exit}
+        '
+    }
+
+    prev_source="$(get_default_source)"
+    prev_port="$(get_active_port "$prev_source")"
 
     pactl subscribe | while read -r line; do
         case "$line" in
-            *"on source"*|*"on card"*)
-                curr_port="$(get_mic_port)"
+            *"on source"*|*"on server"*|*"on card"*)
 
-                if [ "$curr_port" != "$prev_port" ]; then
-                    case "$curr_port" in
-                        *headset*|*headphone*)
-                            dunstify -u normal "Microphone" "Headset mic active 🎧"
-                            ;;
-                        *internal*|*analog*)
-                            dunstify -u normal "Microphone" "Internal mic active 🎙"
-                            ;;
-                        *)
-                            dunstify -u normal "Microphone" "Mic route changed: $curr_port"
-                            ;;
-                    esac
+                curr_source="$(get_default_source)"
+                curr_port="$(get_active_port "$curr_source")"
 
+                if [ "$curr_source" != "$prev_source" ] || [ "$curr_port" != "$prev_port" ]; then
+
+                    desc="$(get_source_desc "$curr_source")"
+
+                    # ---- TRUTH ENGINE ----
+                    if echo "$curr_source" | grep -qi usb; then
+                        msg="USB mic active 🎤"
+
+                    else
+                        case "$curr_port" in
+                            *internal*)
+                                msg="Internal mic active 🎙"
+                                ;;
+                            *mic)
+                                msg="Headset mic active 🎧"
+                                ;;
+                            *)
+                                msg="$desc"
+                                ;;
+                        esac
+                    fi
+
+                    dunstify -u normal "Microphone" "$msg"
+
+                    prev_source="$curr_source"
                     prev_port="$curr_port"
-                    pkill -RTMIN+3 dwmblocks 2>/dev/null
+
+                    pkill -RTMIN+4 dwmblocks 2>/dev/null
                 fi
                 ;;
         esac
     done
+
     exit 0
 fi
 
+# ---- CLICK HANDLING ----
 case $BLOCK_BUTTON in
-    1) toggle_mic;;   # left click → toggle
+    1) toggle_mic ;;  # left click
     2) dunstify --urgency=low "Mic Info" \
-		"\nLMB: Toggle microphone on/off.\n\nRMB: Show info about audio sources.\n\nMMB: Show this help.\n\nScroll: Increase/Decrease the volume of the mic (audio source).\n";;
-    3) dunstify --urgency=low "Microphone" "$(get_info)" ;;  # right click → info
-
+"\nLMB: Toggle microphone on/off.\n\nRMB: Show info about audio sources.\n\nMMB: Show this help.\n\nScroll: Increase/Decrease mic volume.\n" ;;
+    3) dunstify --urgency=low "Microphone" "$(get_info)" ;;  # right click
     4) pactl set-source-volume @DEFAULT_SOURCE@ +5% ;; # scroll up
-
     5) pactl set-source-volume @DEFAULT_SOURCE@ -5% ;; # scroll down
 esac
 
+# ---- STATUS BAR ICON ----
 STATUS="$(get_mic)"
 
 if [ "$STATUS" = "yes" ]; then
-    ICON="🎙❌"   # muted
+    ICON="🎙❌"
 else
-    ICON="🎙"     # active
+    ICON="🎙"
 fi
 
 printf "%s\n" "$ICON"
