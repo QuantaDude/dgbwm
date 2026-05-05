@@ -74,6 +74,13 @@
 
 #+end_src
 
+#+begin_src emacs-lisp
+(elpaca (compat
+         :host github
+         :repo "emacs-compat/compat"
+         :branch "main"))
+
+#+end_src 
 ** Load My Fav Theme and configure UI
 
 #+begin_src emacs-lisp
@@ -185,5 +192,57 @@
 (elpaca meow
   (my/meow-setup)) 
   #+end_src
+
+** File Manager
+#+begin_src emacs-lisp
+  (setq dired-auto-revert-buffer t)
+  (setq dired-dwim-target t)
+  (setq dired-listing-switches "-alh --group-directories-first")
+
+  (elpaca all-the-icons-dired
+    (add-hook 'dired-mode-hook #'all-the-icons-dired-mode))
+
+  (elpaca diredfl
+    (add-hook 'dired-mode-hook #'diredfl-mode))
+
+  (elpaca dired-narrow
+    (define-key dired-mode-map (kbd "/") #'dired-narrow))
+
+  (elpaca async
+    (dired-async-mode 1))
+
+  (elpaca dired-open
+    (setq dired-open-extensions
+          '(("png" . "sxiv")
+            ("mkv" . "mpv")
+            ("pdf" . "zathura"))))
+
+  (put 'dired-find-alternate-file 'disabled nil)
+
+  (defun my-dired-up ()
+    (interactive)
+    (find-alternate-file ".."))
+
+  (define-key dired-mode-map (kbd "^") 'my-dired-up)
+
+ (setq delete-by-moving-to-trash t) (setq dired-recursive-deletes 'always) (setq dired-recursive-copies 'always)
+#+end_src
+
+** Vertico Completion
+#+begin_src emacs-lisp
+;; Core completion UI
+(elpaca vertico
+  (vertico-mode))
+
+;; PERSIST history
+(elpaca savehist
+  (savehist-mode))
+
+;; Better matching (THIS is the real upgrade)
+(elpaca orderless
+  (setq completion-styles '(orderless basic)
+        completion-category-overrides
+        '((file (styles partial-completion)))))
+#+end_src
 
 ** General Keybindings
