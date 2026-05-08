@@ -47,23 +47,23 @@ choose_wallpaper() {
     \))
 
     if [ -z "$files" ]; then
-        echo "[!] No wallpapers found in $DIR" >&2
+        warn "No wallpapers found in $DIR" >&2
         echo "$WALLPAPER"
         return
     fi
 
     echo "" >&2
-    echo "[*] Select wallpaper (current: ${WALLPAPER:-none})" >&2
+    question "Select wallpaper (current: ${WALLPAPER:-none})" >&2
 
     i=1
     for f in $files; do
         name=$(basename "$f")
-        echo "  $i) $name" >&2
+        info "  $i) $name" >&2
         eval "wp_$i=\"$f\""
         i=$((i+1))
     done
 
-    printf "Choice [Enter to keep current]: " >&2
+    question "Choice [Enter to keep current]: " >&2
     read choice
 
     if [ -z "$choice" ]; then
@@ -77,6 +77,23 @@ choose_wallpaper() {
 
 while :; do
     clear
+
+printf "${ORANGE}${BOLD}"
+cat << "EOF"
+
+   ▄████  █     █░ ███▄ ▄███▓
+  ██▒ ▀█▒▓█░ █ ░█░▓██▒▀█▀ ██▒
+ ▒██░▄▄▄░▒█░ █ ░█ ▓██    ▓██░
+ ░▓█  ██▓░█░ █ ░█ ▒██    ▒██
+ ░▒▓███▀▒░░██▒██▓ ▒██▒   ░██▒
+  ░▒   ▒ ░ ▓░▒ ▒  ░ ▒░   ░  ░
+   ░   ░   ▒ ░ ░  ░  ░      ░
+ ░ ░   ░   ░   ░  ░      ░
+       ░     ░           ░
+
+    Gruvbox Window Manager
+        (config-cli)
+EOF
     echo "==== dgbwm Config ===="
     echo ""
     echo "1) Terminal        : $TERMINAL"
@@ -91,8 +108,8 @@ while :; do
     echo "9) Save"
     echo "10) Exit"
     echo ""
-
-    printf "Choice: "
+    printf "${RESET}\n"
+    question "Choice: "
     read choice
 
     case "$choice" in
@@ -158,9 +175,9 @@ while :; do
             ;;
         7)
             echo ""
-            echo "1) Disable"
-            echo "2) IP-based"
-            echo "3) Location-based"
+            info "1) Disable"
+            info "2) IP-based"
+            info "3) Location-based"
             printf "Choice: "
             read w
 
@@ -198,10 +215,10 @@ WALLPAPER=$WALLPAPER
 IS_LAPTOP=$IS_LAPTOP
 EOF
 
-            echo "[✓] Saved."
+            success "Saved."
 
             if [ "$MODE" != "$OLD_MODE" ]; then
-                echo "[*] Mode changed → rebuilding dwm and dwmblocks..."
+                info "Mode changed → rebuilding dwm and dwmblocks..."
 
                 SRC="$XDG_DATA_HOME/dgbwm/"
 
@@ -241,7 +258,7 @@ EOF
                     install && sudo make clean)
                 fi
 
-            echo "[✓] Rebuild complete"
+            success "Rebuild complete"
             sleep 1
             killall dwm
             sleep 1

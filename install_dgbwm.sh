@@ -1,13 +1,77 @@
 #!/bin/sh
 set -e
+# =========================
+# Gruvbox Colors
+# =========================
+
+RESET="\033[0m"
+
+BG="#282828"
+
+RED="\033[38;2;204;36;29m"
+GREEN="\033[38;2;152;151;26m"
+YELLOW="\033[38;2;215;153;33m"
+BLUE="\033[38;2;69;133;136m"
+PURPLE="\033[38;2;177;98;134m"
+AQUA="\033[38;2;104;157;106m"
+ORANGE="\033[38;2;214;93;14m"
+GRAY="\033[38;2;168;153;132m"
+
+BOLD="\033[1m"
+
+section() {
+    printf "\n${ORANGE}${BOLD}==> %s${RESET}\n" "$1"
+}
+
+info() {
+    printf "${BLUE}[*] %s${RESET}\n" "$1"
+}
+
+success() {
+    printf "${GREEN}[✓] %s${RESET}\n" "$1"
+}
+
+warn() {
+    printf "${YELLOW}[!] %s${RESET}\n" "$1"
+}
+
+error() {
+    printf "${RED}[✗] %s${RESET}\n" "$1"
+}
+
+question() {
+    printf "${PURPLE}[?] %s${RESET}" "$1"
+}
+
+clear
+
+printf "${ORANGE}${BOLD}"
+cat << "EOF"
+
+   ▄████  █     █░ ███▄ ▄███▓
+  ██▒ ▀█▒▓█░ █ ░█░▓██▒▀█▀ ██▒
+ ▒██░▄▄▄░▒█░ █ ░█ ▓██    ▓██░
+ ░▓█  ██▓░█░ █ ░█ ▒██    ▒██
+ ░▒▓███▀▒░░██▒██▓ ▒██▒   ░██▒
+  ░▒   ▒ ░ ▓░▒ ▒  ░ ▒░   ░  ░
+   ░   ░   ▒ ░ ░  ░  ░      ░
+ ░ ░   ░   ░   ░  ░      ░
+       ░     ░           ░
+
+    Gruvbox Window Manager
+         (Installer)
+
+EOF
+printf "${RESET}\n"
+
 # --- XDG fallbacks ---
 XDG_CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
 XDG_DATA_HOME="${XDG_DATA_HOME:-$HOME/.local/share}"
 
 
-echo "[*] Using:"
-echo "    CONFIG: $XDG_CONFIG_HOME"
-echo "    DATA:   $XDG_DATA_HOME"
+info "Using:"
+info "    CONFIG: $XDG_CONFIG_HOME"
+info "    DATA:   $XDG_DATA_HOME"
 
 # --- Create dirs if missing ---
 mkdir -p "$XDG_CONFIG_HOME"
@@ -27,13 +91,13 @@ HAS_CONFIG=0
 
 # --- Copy DGBWM to .local/share ---
 
-echo "[*] Copying entire project to data dir..."
+info "Copying entire project to data dir..."
 
 SRC="$(realpath .)"
 DEST_REAL="$(realpath "$DEST" 2>/dev/null || echo "$DEST")"
 
 if [ "$SRC" = "$DEST_REAL" ]; then
-    echo "[*] Already inside $DEST, skipping copy"
+    warn "Already inside $DEST, skipping copy"
 else
     mkdir -p "$DEST"
 
@@ -61,7 +125,7 @@ else
 
         backup_dir="$DEST/${name}.bak.$timestamp"
 
-        echo "[*] Changes detected in $name → backing up to $backup_dir"
+        warn "Changes detected in $name → backing up to $backup_dir"
 
         mkdir -p "$backup_dir"
 
@@ -82,7 +146,7 @@ else
 
         # preserve user config if exists
         if [ -f "$CONFIG_FILE" ] && [ "$f" = ".config" ]; then
-            echo "[*] Preserving existing .config"
+            warn "Preserving existing .config"
             continue
         fi
 
@@ -100,12 +164,11 @@ else
     done
 fi
 
-echo "[*] Copy complete"
+success "Copy complete"
 cd "$DEST" || {
-    echo "[!] Failed to enter $DEST"
+    echo "Failed to enter $DEST"
     exit 1
 }
-
 
 
 DGBWM_LIB="$XDG_DATA_HOME/dgbwm/dgbwm-utils.sh"
@@ -120,7 +183,7 @@ Hack Nerd Font
 Noto Emoji
 "
 
-OPTIONAL_PKGS="flameshot vifm emacs qutebrowser btop mpv kew"
+OPTIONAL_PKGS="flameshot vifm nvim emacs qutebrowser btop mpv kew"
 
 detect_distro() {
     if [ -f /etc/os-release ]; then
@@ -175,6 +238,52 @@ check_optional_missing() {
 
     echo "$missing"
 }
+install_mini_neovim_ide() {
+    MINI_NVIM_DIR="$HOME/.local/share/MiniNeovimIDE"
+
+    echo ""
+    section "MiniNeovimIDE Setup"
+
+    if [ -d "$MINI_NVIM_DIR/.git" ]; then
+        warn "MiniNeovimIDE already exists at:"
+        info "$MINI_NVIM_DIR"
+
+        question "Reinstall/update it? (y/n): "
+        read ans
+
+        case "$ans" in
+            y|Y)
+                info "Removing old MiniNeovimIDE..."
+                rm -rf "$MINI_NVIM_DIR"
+                ;;
+            *)
+                info "Skipping MiniNeovimIDE installation."
+                return
+                ;;
+        esac
+    fi
+
+    info "Cloning MiniNeovimIDE..."
+
+    git clone \
+        https://github.com/QuantaDude/MiniNeovimIDE \
+        "$MINI_NVIM_DIR"
+
+    success "Repository cloned."
+
+    if [ -f "$MINI_NVIM_DIR/install.sh" ]; then
+        info "Running install.sh..."
+
+        cd "$MINI_NVIM_DIR"
+        chmod +x install.sh
+        sh ./install.sh
+
+        success "MiniNeovimIDE installed."
+        cd "$DEST"
+    else
+        error "install.sh not found."
+    fi
+}
 
 choose_optional_install() {
     missing="$1"
@@ -182,7 +291,7 @@ choose_optional_install() {
     [ -z "$missing" ] && return
 
     echo ""
-    echo "[*] Optional tools not found:"
+    info "Optional tools not found:"
     
     i=1
     for pkg in $missing; do
@@ -192,14 +301,14 @@ choose_optional_install() {
     done
 
     echo ""
-    echo "Select which ones to install (space-separated numbers)"
-    echo "Press Enter to skip all"
+    question "Select which ones to install (space-separated numbers)"
+    question "Press Enter to skip all"
 
-    printf "Choice: "
+    info "Choice: "
     read choices
 
     [ -z "$choices" ] && {
-        echo "[*] Skipping optional tools."
+        info "Skipping optional tools."
         return
     }
 
@@ -209,7 +318,7 @@ choose_optional_install() {
         eval "selected=\"$selected \$opt_$c\""
     done
 
-    echo "[*] Selected:$selected"
+    info "Selected:$selected"
 
     if [ "$ARCH_BASED" -eq 1 ]; then
         if command -v yay >/dev/null 2>&1; then
@@ -219,7 +328,7 @@ choose_optional_install() {
         fi
     else
         echo ""
-        echo "[!] Install manually:"
+        error "Install manually:"
         
         if command -v apt >/dev/null 2>&1; then
             echo "    sudo apt install $selected"
@@ -249,13 +358,13 @@ IS_LAPTOP=0
 
 if find /sys/class/power_supply -maxdepth 1 -name 'BAT*' | grep -q .; then
     IS_LAPTOP=1
-    echo "[*] Laptop detected"
+    info "Laptop detected"
 fi
 # -- Detect Distro ---
 
 detect_distro
 
-echo "[*] Detected $DISTRO distro."
+info "Detected $DISTRO distro."
 echo ""
 
 case "$DISTRO" in
@@ -273,10 +382,10 @@ case "$DISTRO" in
 esac
 
 if [ "$ARCH_BASED" -eq 1 ]; then
-    echo "[*] Arch-based system detected. Auto-install enabled."
+    success "Arch-based system detected. Auto-install enabled."
 else
-    echo "[!] Non-Arch distro detected."
-    echo "[!] You must manually install missing dependencies."
+    warn "Non-Arch distro detected."
+    warn "You must manually install missing dependencies."
 fi
 
 echo ""
@@ -285,19 +394,19 @@ echo ""
 
 # --- Check for missing dependencies ---
 
-echo "[*] Checking dependencies..."
+info "[*] Checking dependencies..."
 missing_pkgs="$(check_deps)"
 
-echo "[*] Checking fonts..."
+info "[*] Checking fonts..."
 missing_fonts="$(check_fonts)"
 
 # --- Handle missing deps ---
 if [ -n "$missing_pkgs" ]; then
-    echo "[!] Missing packages:$missing_pkgs"
+    warn "Missing packages:$missing_pkgs"
 fi
 
 if [ -n "$missing_fonts" ]; then
-    echo "[!] Missing fonts:$missing_fonts"
+    warn "Missing fonts:$missing_fonts"
 fi
 
 if [ -n "$missing_pkgs$missing_fonts" ]; then
@@ -305,7 +414,7 @@ if [ -n "$missing_pkgs$missing_fonts" ]; then
 
     case $ARCH_BASED in
         1)
-            printf "[?] Install missing components? (y/n): "
+            question "Install missing components? (y/n): "
             read ans
 
             if [ "$ans" = "y" ] || [ "$ans" = "Y" ]; then
@@ -318,18 +427,18 @@ if [ -n "$missing_pkgs$missing_fonts" ]; then
                     fi
                 fi
             if echo "$missing_fonts" | grep -iq "Noto Emoji"; then
-                echo "[*] Installing Noto Emoji Monochrome font..."
+                info "Installing Noto Emoji Monochrome font..."
 
                 sh "$DEST/fonts/install-ttf-noto-emoji-mono.sh"
             fi
 
             else
-                echo "[!] Aborting."
+                error "Aborting."
                 exit 1
             fi
             ;;
         0)
-            echo "[!] Install missing items manually."
+            error "Install missing items manually."
             exit 1
             ;;
     esac
@@ -376,7 +485,7 @@ fi
 
     backup_dir="$DEST/${name}.bak.$timestamp"
 
-    echo "[*] Changes detected in $name → backing up to $backup_dir"
+    warn "[*] Changes detected in $name → backing up to $backup_dir"
 
     mkdir -p "$backup_dir"
     # copy entire existing tree (user-modified version)
@@ -399,23 +508,23 @@ choose_wallpaper() {
     \))
 
     if [ -z "$files" ]; then
-        echo "[!] No wallpapers found in $DIR" >&2
+        error "No wallpapers found in $DIR" >&2
         echo "$WALLPAPER"
         return
     fi
 
     echo "" >&2
-    echo "[*] Select wallpaper (current: ${WALLPAPER:-none})" >&2
-
+    question "Select wallpaper (current: ${WALLPAPER:-none})" >&2
+    echo "" >&2
     i=1
     for f in $files; do
         name=$(basename "$f")
-        echo "  $i) $name" >&2
+        info "  $i) $name" >&2
         eval "wp_$i=\"$f\""
         i=$((i+1))
     done
 
-    printf "Choice [Enter to keep current]: " >&2
+    question "Choice [Enter to keep current]: " >&2
     read choice
 
     if [ -z "$choice" ]; then
@@ -427,7 +536,7 @@ choose_wallpaper() {
 }
 
 echo ""
-echo "[*] Choose the text editor"
+question "Choose the text editor"
 echo ""
 
 editor=$(choose_program \
@@ -439,29 +548,29 @@ editor_desktop=$(get_desktop_file "$editor")
 ED_NEEDS_TERM=0
 
 if [ -n "$editor_desktop" ]; then
-    echo "[*] Found desktop entry: $editor_desktop"
+    info "Found desktop entry: $editor_desktop"
 
     term_flag=$(get_terminal_requirement "$editor_desktop")
 
     if [ -n "$term_flag" ]; then
         ED_NEEDS_TERM=$term_flag
-        echo "[*] Terminal requirement detected: $ED_NEEDS_TERM"
+        info "Terminal requirement detected: $ED_NEEDS_TERM"
     else
-        echo "[!] Could not determine Terminal= from .desktop"
+        warn "Could not determine Terminal= from .desktop"
     fi
 
     # set default editor for text
-    echo "[*] Setting editor for all supported text MIME types"
+    info "Setting editor for all supported text MIME types"
     set_mime_from_desktop "$editor_desktop" "text/"
     xdg-mime default "$editor_desktop" "text/plain"
 
 
 else
-    echo "[!] No .desktop file found for $editor"
+    error "No .desktop file found for $editor"
 
     # fallback: ask user
     echo ""
-    printf "[?] Does '%s' require a terminal to run? (y/n): " "$editor"
+    question "Does '%s' require a terminal to run? (y/n): " "$editor"
     read ans
 
     case "$ans" in
@@ -470,7 +579,7 @@ else
     esac
 fi
 
-echo "[*] ED_NEEDS_TERM=$ED_NEEDS_TERM"
+info "ED_NEEDS_TERM=$ED_NEEDS_TERM"
 
 BASHRC="$HOME/.bashrc"
 
@@ -483,7 +592,7 @@ echo "export EDITOR=$editor" >> "$BASHRC"
 echo "export VISUAL=$editor" >> "$BASHRC"
 
 echo ""
-echo "[*] Choose the web browser to quick launch using the keybind (Super + F1)"
+question "Choose the web browser to quick launch using the keybind (Super + F1)"
 echo ""
 browser=$(choose_program \
     "browser" \
@@ -493,15 +602,15 @@ browser=$(choose_program \
 browser_desktop=$(get_desktop_file "$browser")
 
 if [ -n "$browser_desktop" ]; then
-    echo "[*] setting default xdg web browser desktop entry: $browser_desktop"
+    info "Setting default xdg web browser desktop entry: $browser_desktop"
     xdg-settings set default-web-browser $browser_desktop
     xdg-settings set default-url-scheme-handler https $browser_desktop
 else
-    echo "[!] Could not find .desktop file for $browser."
+    warn "Could not find .desktop file for $browser."
 fi
 
 echo ""
-echo "[*] Choose the file manager to quick launch using the keybind (Super + F2)"
+question "Choose the file manager to quick launch using the keybind (Super + F2)"
 echo ""
 
 fm=$(choose_program \
@@ -514,15 +623,15 @@ fm_desktop=$(get_desktop_file "$fm")
 FM_NEEDS_TERM=0
 
 if [ -n "$fm_desktop" ]; then
-    echo "[*] Found desktop entry: $fm_desktop"
+    info "Found desktop entry: $fm_desktop"
 
     term_flag=$(get_terminal_requirement "$fm_desktop")
 
     if [ "$term_flag" = "1" ] || [ "$term_flag" = "0" ]; then
         FM_NEEDS_TERM=$term_flag
-        echo "[*] Terminal requirement detected: $FM_NEEDS_TERM"
+        info "Terminal requirement detected: $FM_NEEDS_TERM"
     else
-        echo "[!] Could not determine Terminal= from .desktop"
+        warn "Could not determine Terminal= from .desktop"
     fi
 
     # set as default file manager
@@ -531,11 +640,11 @@ if [ -n "$fm_desktop" ]; then
     xdg-mime default "$fm_desktop" "text/vnd.typst"
 
 else
-    echo "[!] No .desktop file found for $fm"
+    warn "No .desktop file found for $fm"
 
     # fallback: ask user
     echo ""
-    printf "[?] Does '%s' require a terminal to run? (y/n): " "$fm"
+    question "Does '%s' require a terminal to run? (y/n): " "$fm"
     read ans
 
     case "$ans" in
@@ -544,10 +653,10 @@ else
     esac
 fi
 
-echo "[*] FM_NEEDS_TERM=$FM_NEEDS_TERM"
+info "FM_NEEDS_TERM=$FM_NEEDS_TERM"
 
 echo ""
-echo "[*] Choose the resource monitor to quick launch from the status bar"
+question "Choose the resource monitor to quick launch from the status bar"
 echo ""
 res_monitor=$(choose_program \
     "system monitor" \
@@ -556,7 +665,7 @@ res_monitor=$(choose_program \
 
 # --- Build & install suckless tools ---
 echo ""
-echo "[*] Do you want to install st (suckless terminal) y/n ?"
+question "Do you want to install st (suckless terminal) y/n ?"
 read install_st
 
 if [ "$install_st" = "y" ] || [ "$install_st" = "Y" ]; then
@@ -565,7 +674,7 @@ if [ "$install_st" = "y" ] || [ "$install_st" = "Y" ]; then
 else
     INSTALL_ST=0
     echo ""
-    echo "[*] Choose the terminal to quick using the keybind (Super + t)"
+    question "Choose the terminal to quick using the keybind (Super + t)"
     echo ""
     terminal=$(choose_program \
     "terminal" \
@@ -573,26 +682,26 @@ else
     $(detect_programs "$TERMINALS"))
 fi
 
-echo "[*] Selected terminal: $terminal"
+success "Selected terminal: $terminal"
 
 if [ "$INSTALL_ST" -eq 1 ]; then
-    echo "[*] Installing st..."
+    info "Installing st..."
     cd st && sudo make clean install
     sudo make clean
     cd ..
 else
-    echo "[*] Skipping st installation"
+    info "Skipping st installation"
 fi
 
-echo "[*] Installing dwm..."
+section "Installing DWM"
 # -------- Mode --------
 
 echo ""
 
 if [ "$HAS_CONFIG" -eq 1 ]; then
-    printf "[*] Do you tinker often? (current: %s) (y/n, Enter to keep): " "$MODE"
+    question "Do you tinker often? (current: $MODE) (y/n, Enter to keep): "
 else
-    printf "[*] Do you tinker often? (y/n): "
+  question "Do you tinker often? (y/n): "
 fi
 
 read dynamic
@@ -621,16 +730,17 @@ else
     sudo make clean
 fi
 
+success "Installed DWM."
 
-echo "[*] Installing dwmblocks..."
+section "Installing dwmblocks-async"
 echo ""
 
-echo "[*] Weather configuration (current: ${WEATHER_MODE:-none})"
+info "Weather configuration (current: ${WEATHER_MODE:-none})"
 
-echo "  1) Disable"
-echo "  2) IP-based"
-echo "  3) Location-based"
-printf "Choice [Enter to keep current]: "
+info "  1) Disable"
+info "  2) IP-based"
+info "  3) Location-based"
+question "Choice [Enter to keep current]: "
 read wchoice
 
 if [ -z "$wchoice" ]; then
@@ -644,7 +754,7 @@ else
             WEATHER_MODE="ip"
             ;;
         3)
-            printf "Enter location (e.g.: Delhi, or West_Delhi or XYZ_CITY_NAME): "
+            question "Enter location (e.g.: Delhi, or West_Delhi or XYZ_CITY_NAME): "
             read loc
             WEATHER_MODE="location:$loc"
             ;;
@@ -669,25 +779,27 @@ else
     sudo make clean
 fi
 
+success "Installed dwmblocks-async"
 
-echo "[*] Installing dunst..."
+section "Installing dunst"
 cd ../dunst && sudo make clean install && sudo make clean
 cd ..
 
 echo ""
+success "Installed dunst."
 
 if [ "$HAS_CONFIG" -eq 1 ]; then
-    printf "[*] Change wallpaper? (y/n, Enter to keep): "
+    question "Change wallpaper? (y/n, Enter to keep): "
     read ans
     [ "$ans" = "y" ] && WALLPAPER=$(choose_wallpaper)
 else
-    printf "[*] Select wallpaper? (y/n): "
+    question "Select wallpaper? (y/n): "
     read ans
     [ "$ans" = "y" ] && WALLPAPER=$(choose_wallpaper)
 fi
 
 
-echo "[*] Saving config..."
+info "Saving config..."
 
 cat > "$CONFIG_FILE" <<EOF
 MODE=$MODE
@@ -704,14 +816,16 @@ IS_LAPTOP=$IS_LAPTOP
 EOF
 
 # --- Install start script ---
-echo "[*] Installing dgbwm-init, dgbwm-config, and dgbwm-run scripts"
+section "Installing dgbwm-init, dgbwm-config, and dgbwm-run scripts"
 
 sudo install -Dm755 dgbwm-init /usr/local/bin/dgbwm-init
 sudo install -Dm755 dgbwm-config /usr/local/bin/dgbwm-config
 sudo install -Dm755 dgbwm-run /usr/local/bin/dgbwm-run
 
+success "Succesfully installed scripts."
+
 # --- Install desktop entry ---
-echo "[*] Installing dgbwm.desktop..."
+section "Installing dgbwm.desktop"
 
 sudo install -Dm644 dgbwm.desktop /usr/local/share/xsessions/dgbwm.desktop
 
@@ -720,9 +834,33 @@ if [ -d /usr/share/xsessions ]; then
     sudo install -Dm644 dgbwm.desktop /usr/share/xsessions/dgbwm.desktop
 fi
 
+success "Installed Desktop files."
 # --- Configs ---
 
-echo "[*] Linking configs..."
+# ==========================================
+# Neovim configuration setup
+# ==========================================
+
+if command -v nvim >/dev/null 2>&1; then
+    if [ ! -d "$HOME/.local/share/MiniNeovimIDE" ]; then
+        section "MiniNeovimIDE"
+        echo ""
+        question "Neovim detected. Install MiniNeovimIDE config? (y/n): "
+        read install_mini
+
+        case "$install_mini" in
+            y|Y)
+                install_mini_neovim_ide
+                ;;
+            *)
+                info "Skipping MiniNeovimIDE setup."
+                ;;
+        esac
+    else
+        info "MiniNeovimIDE already installed."
+    fi
+fi
+section "Linking configs"
 
 for dir in .config/*; do
     name=$(basename "$dir")
@@ -732,33 +870,33 @@ for dir in .config/*; do
 
     if [ -e "$target" ] && [ ! -L "$target" ]; then
         echo ""
-        echo "[!] Config '$name' already exists at $target"
-        echo "Choose an action:"
-        echo "  1) Backup and overwrite"
-        echo "  2) Overwrite without backup"
-        echo "  3) Skip"
+        warn "Config '$name' already exists at $target"
+        question "Choose an action:"
+        info     "1) Backup and overwrite"
+        info     "2) Overwrite without backup"
+        info     "3) Skip"
 
-        printf "Choice (1/2/3): "
+        question "Choice (1/2/3): "
         read choice
 
         case "$choice" in
             1)
 		backup="$XDG_CONFIG_HOME/${name}.bak.$(date +%s)"
                 
-                echo "    Backing up to $backup"
+                info "    Backing up to $backup"
                 rm -rf "$backup"
                 mv "$target" "$backup"
                 ;;
             2)
-                echo "    Overwriting $target"
+                warn "    Overwriting $target"
                 rm -rf "$target"
                 ;;
             3)
-                echo "    Skipping $name"
+                info "    Skipping $name"
                 continue
                 ;;
             *)
-                echo "    Invalid choice, skipping"
+                warn "    Invalid choice, skipping"
                 continue
                 ;;
         esac
@@ -769,11 +907,13 @@ for dir in .config/*; do
         rm -f "$target"
     fi
 
-    echo "    Linking $name"
+    info "    Linking $name"
     ln -sf "$source_dir" "$target"
 done
 
-echo "[*] Installing application .desktop files..."
+success " symlinked configuration files."
+
+section "Installing application .desktop files"
 
 DESKTOP_SRC="./.desktop"
 DESKTOP_DEST="/usr/share/applications"
@@ -787,7 +927,7 @@ if [ -d "$DESKTOP_SRC" ]; then
         cmd="${name%.desktop}"
 
         if command -v $cmd >/dev/null 2>&1; then
-            echo "    Installing $name → $DESKTOP_DEST"
+            info "    Installing $name → $DESKTOP_DEST"
             sudo install -Dm644 "$file" "$DESKTOP_DEST/$name"
         fi
     done
@@ -796,19 +936,19 @@ if [ -d "$DESKTOP_SRC" ]; then
         sudo update-desktop-database "$DESKTOP_DEST"
     fi
 else
-    echo "[*] No .desktop directory found, skipping"
+    warn "No .desktop directory found, skipping"
 fi
 
 
 if [ "$HAS_CONFIG" -eq 0 ]; then
     echo ""
-    echo "[*] Setting feh as the default image viewer..."
+    info "Setting feh as the default image viewer..."
 
     set_mime_from_desktop "feh.desktop" "image/"
 
     echo ""
 
-    echo "[*] Setting default audio player..."
+    info "Setting default audio player..."
 
     audio_player=""
 
@@ -824,15 +964,15 @@ if [ "$HAS_CONFIG" -eq 0 ]; then
         audio_desktop=$(get_desktop_file "$audio_player")
 
         if [ -n "$audio_desktop" ]; then
-            echo "[*] Using $audio_player ($audio_desktop) for all audio types"
+            success "Using $audio_player ($audio_desktop) for all audio types"
             set_mime_from_desktop "$audio_desktop" "audio/"
         else
-            echo "not found"
+            error "not found"
         fi
     fi
 
     echo ""
-    echo "[*] Setting default video player..."
+    info "Setting default video player..."
 
     video_player=""
 
@@ -846,7 +986,7 @@ if [ "$HAS_CONFIG" -eq 0 ]; then
         video_desktop=$(get_desktop_file "$video_player")
 
     if [ -n "$video_desktop" ]; then
-        echo "[*] Using $video_player ($video_desktop) for all video types"
+        success "Using $video_player ($video_desktop) for all video types"
         set_mime_from_desktop "$video_desktop" "video/"
     fi
     
@@ -855,4 +995,4 @@ if [ "$HAS_CONFIG" -eq 0 ]; then
 fi
 
 
-echo "[✓] Done. Restart X session."
+success "[✓] Done. Restart X session."

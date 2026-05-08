@@ -1,5 +1,48 @@
 #!/bin/sh
 
+# =========================
+# Gruvbox Colors
+# =========================
+
+RESET="\033[0m"
+
+BG="#282828"
+
+RED="\033[38;2;204;36;29m"
+GREEN="\033[38;2;152;151;26m"
+YELLOW="\033[38;2;215;153;33m"
+BLUE="\033[38;2;69;133;136m"
+PURPLE="\033[38;2;177;98;134m"
+AQUA="\033[38;2;104;157;106m"
+ORANGE="\033[38;2;214;93;14m"
+GRAY="\033[38;2;168;153;132m"
+
+BOLD="\033[1m"
+
+section() {
+    printf "\n${ORANGE}${BOLD}==> %s${RESET}\n" "$1"
+}
+
+info() {
+    printf "${BLUE}[*] %s${RESET}\n" "$1"
+}
+
+success() {
+    printf "${GREEN}[✓] %s${RESET}\n" "$1"
+}
+
+warn() {
+    printf "${YELLOW}[!] %s${RESET}\n" "$1"
+}
+
+error() {
+    printf "${RED}[✗] %s${RESET}\n" "$1"
+}
+
+question() {
+    printf "${PURPLE}[?] %s${RESET}" "$1"
+}
+
 detect_programs() {
     found=""
     for prog in $1; do
@@ -14,7 +57,7 @@ validate_exec() {
     if command -v "$1" >/dev/null 2>&1; then
         return 0
     else
-        echo "[!] '$1' not found in PATH" >&2
+        error "[!] '$1' not found in PATH" >&2
         return 1
     fi
 }
@@ -27,9 +70,9 @@ choose_program() {
     options="$@"
 
     if [ -z "$options" ]; then
-    echo "[!] No known programs found for $category" >&2
+    warn "[!] No known programs found for $category" >&2
     while :; do
-        printf "Enter executable manually: " >&2
+        question "Enter executable manually: " >&2
         read manual
         if validate_exec "$manual"; then
             echo "$manual"
@@ -49,13 +92,13 @@ fi
     fi
 
     echo "" >&2
-    echo "[*] Select $category:" >&2
-
+    question "[*] Select $category:" >&2
+    echo "" >&2
     i=1
     default_index=1
 
     for prog in $options; do
-        echo "  $i) $prog" >&2
+        info "  $i) $prog" >&2
         eval "opt_$i=\"$prog\""
 
         [ "$prog" = "$default" ] && default_index=$i
@@ -63,10 +106,10 @@ fi
         i=$((i+1))
     done
 
-    echo "  $i) <other>" >&2
+    info "  $i) <other>" >&2
     other_index=$i
 
-    printf "Choice [default %d]: " "$default_index" >&2
+    question "Choice [default $default_index]: ">&2
     read choice
 
     # default on empty
@@ -85,7 +128,7 @@ fi
     
     if [ "$choice" -eq "$other_index" ]; then
         while :; do
-            printf "Enter executable name: " >&2
+            question "Enter executable name: " >&2
             read manual
 
             if validate_exec "$manual"; then

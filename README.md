@@ -41,11 +41,11 @@ On arch based systems the installation script will install these if missing.
 ## Installation
 
 ```bash
-git clone https://github.com/QuantaDude/dgbwm && cd dgbwm && chmod +x install_dgbwm.sh && sudo ./install_dgbwm.sh
+git clone https://github.com/QuantaDude/gwm && cd gwm && chmod +x install_dgbwm.sh && sudo ./install_dgbwm.sh
 ```
 or
 ```bash
-git clone https://github.com/QuantaDude/dgbwm
+git clone https://github.com/QuantaDude/dwm
 cd dgbwm
 chmod +x install_dgbwm.sh
 sudo ./install_dgbwm.sh
