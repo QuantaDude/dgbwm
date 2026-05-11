@@ -75,21 +75,24 @@ info "    DATA:   $XDG_DATA_HOME"
 
 # --- Create dirs if missing ---
 mkdir -p "$XDG_CONFIG_HOME"
-mkdir -p "$XDG_DATA_HOME/dgbwm"
+mkdir -p "$XDG_DATA_HOME/dgwm"
 
-DATA_CONFIG_DIR="$XDG_DATA_HOME/dgbwm/.config"
+DATA_CONFIG_DIR="$XDG_DATA_HOME/dgwm/.config"
 
-mkdir -p "$DATA_CONFIG_DIR/dgbwm"
+mkdir -p "$DATA_CONFIG_DIR/dgwm"
 
-DEST="$XDG_DATA_HOME/dgbwm"
-CONFIG_FILE="$DEST/.config/dgbwm/dgbwmrc"
+
+BASHRC="$HOME/.bashrc"
+
+DEST="$XDG_DATA_HOME/dgwm"
+CONFIG_FILE="$DEST/.config/dgwm/dgwmrc"
 
 [ -f "$CONFIG_FILE" ] && . "$CONFIG_FILE"
 
 HAS_CONFIG=0
 [ -f "$CONFIG_FILE" ] && HAS_CONFIG=1
 
-# --- Copy DGBWM to .local/share ---
+# --- Copy DGWM to .local/share ---
 
 info "Copying entire project to data dir..."
 
@@ -171,19 +174,20 @@ cd "$DEST" || {
 }
 
 
-DGBWM_LIB="$XDG_DATA_HOME/dgbwm/dgbwm-utils.sh"
+DGWM_LIB="$XDG_DATA_HOME/dgwm/dgwm-utils.sh"
 
-[ -f "$DGBWM_LIB" ] && . "$DGBWM_LIB"
+[ -f "$DGWM_LIB" ] && . "$DGWM_LIB"
 
-DEPS="feh xorg-server libx11 pango dbus libxrandr libxinerama libxss xdg-utils pod2man fontconfig xorg-mkfontdir xorg-mkfontscale curl ttf-jetbrains-mono-nerd ttf-hack-nerd"
+# --- I have x11-ssh-askpass as a dependency because my openssh does not prompt me for a password, I need this
+DEPS="feh xorg-server x11-ssh-askpass libx11 pango dbus libxrandr libxinerama libxss xdg-utils pod2man fontconfig xorg-mkfontdir xorg-mkfontscale curl ttf-jetbrains-mono-nerd ttf-fira-code"
 
 FONTS="
 JetBrainsMono Nerd Font
-Hack Nerd Font
+Fira Code
 Noto Emoji
 "
 
-OPTIONAL_PKGS="flameshot vifm nvim emacs qutebrowser btop mpv kew"
+OPTIONAL_PKGS="flameshot vifm nvim emacs qutebrowser btop mpv kew wezterm alacritty"
 
 detect_distro() {
     if [ -f /etc/os-release ]; then
@@ -193,6 +197,42 @@ detect_distro() {
         DISTRO="unknown"
     fi
 }
+
+install_yay() {
+    if command -v yay >/dev/null 2>&1; then
+        success "yay already installed."
+        return
+    fi
+
+    section "Installing yay"
+
+    if ! command -v git >/dev/null 2>&1; then
+        error "git is required to install yay."
+        exit 1
+    fi
+
+    if ! command -v makepkg >/dev/null 2>&1; then
+        error "base-devel / makepkg is required."
+        exit 1
+    fi
+
+    TMP_DIR="/tmp/yay-install.$$"
+
+    rm -rf "$TMP_DIR"
+
+    git clone https://aur.archlinux.org/yay.git "$TMP_DIR"
+
+    cd "$TMP_DIR" || exit 1
+
+    makepkg -si --noconfirm
+
+    cd "$DEST" || exit 1
+
+    rm -rf "$TMP_DIR"
+
+    success "yay installed successfully."
+}
+
 check_deps() {
     missing=""
 
@@ -214,10 +254,12 @@ check_deps() {
 check_fonts() {
     missing_fonts=""
 
+    font_cache="$(fc-list : family)"
+
     while IFS= read -r font; do
         [ -z "$font" ] && continue
 
-        if ! fc-list : family | grep -iq "$font"; then
+        if ! printf '%s\n' "$font_cache" | grep -iq "\\b$font\\b"; then
             missing_fonts="$missing_fonts [$font]"
         fi
     done <<EOF
@@ -314,9 +356,29 @@ choose_optional_install() {
 
     selected=""
 
-    for c in $choices; do
-        eval "selected=\"$selected \$opt_$c\""
-    done
+for c in $choices; do
+    eval "pkg=\$opt_$c"
+
+    selected="$selected $pkg"
+
+    # Extra packages for vifm
+    if [ "$pkg" = "vifm" ]; then
+        selected="$selected \
+        zathura \
+        zathura-pdf-mupdf \
+        zathura-djvu \
+        poppler \
+        atool \
+        unzip \
+        p7zip \
+        unrar \
+        tar \
+        bat \
+        eza \
+        tree \
+        ffmpegthumbnailer"
+    fi
+done
 
     info "Selected:$selected"
 
@@ -345,7 +407,7 @@ choose_optional_install() {
 
 BROWSERS="firefox chromium brave qutebrowser librewolf"
 RES_MONITORS="btop htop top"
-TERMINALS="st kitty ghostty alacritty konsole"
+TERMINALS="st kitty ghostty alacritty wezterm konsole"
 FILE_MANAGERS="vifm thunar pcmanfm ranger nnn lf dolphin"
 TUI_FM="vifm ranger nnn lf"
 
@@ -383,6 +445,8 @@ esac
 
 if [ "$ARCH_BASED" -eq 1 ]; then
     success "Arch-based system detected. Auto-install enabled."
+
+      install_yay
 else
     warn "Non-Arch distro detected."
     warn "You must manually install missing dependencies."
@@ -495,7 +559,7 @@ fi
 
 
 choose_wallpaper() {
-    DIR="$HOME/.local/share/dgbwm/wallpapers/"
+    DIR="$HOME/.local/share/dgwm/wallpapers/"
 
     files=$(find "$DIR" -type f \( \
         -iname "*.png" -o \
@@ -581,7 +645,6 @@ fi
 
 info "ED_NEEDS_TERM=$ED_NEEDS_TERM"
 
-BASHRC="$HOME/.bashrc"
 
 # remove old entries
 sed -i '/^export EDITOR=/d' "$BASHRC"
@@ -693,8 +756,55 @@ else
     info "Skipping st installation"
 fi
 
+# ==========================================
+# Shell selection
+# ==========================================
+
+echo ""
+question "Choose your shell"
+echo ""
+
+user_shell=$(choose_program \
+    "shell" \
+    "$(basename "$SHELL")" \
+    $SHELLS)
+
+install_shell_if_missing "$user_shell"
+
+shell_path="$(command -v "$user_shell")"
+
+# prefer path listed in /etc/shells
+if [ -f /etc/shells ]; then
+    valid_shell="$(grep "/$(basename "$shell_path")$" /etc/shells | head -n1)"
+
+    if [ -n "$valid_shell" ]; then
+        shell_path="$valid_shell"
+    fi
+fi
+
+success "Selected shell: $shell_path"
+
+# remove old SHELL export
+sed -i '/^export SHELL=/d' "$BASHRC"
+
+echo "export SHELL=$shell_path" >> "$BASHRC"
+
+export SHELL="$shell_path"
+
+# change login shell
+if command -v chsh >/dev/null 2>&1; then
+    question "Set $user_shell as login shell using chsh? (y/n): "
+    read ans
+
+    case "$ans" in
+        y|Y)
+            chsh -s "$shell_path"
+            success "Login shell changed to $shell_path"
+            ;;
+    esac
+fi
+
 section "Installing DWM"
-# -------- Mode --------
 
 echo ""
 
@@ -803,6 +913,7 @@ info "Saving config..."
 
 cat > "$CONFIG_FILE" <<EOF
 MODE=$MODE
+SHELL=$shell_path
 TERMINAL=$terminal
 BROWSER=$browser
 FILE_MANAGER=$fm
@@ -816,22 +927,22 @@ IS_LAPTOP=$IS_LAPTOP
 EOF
 
 # --- Install start script ---
-section "Installing dgbwm-init, dgbwm-config, and dgbwm-run scripts"
+section "Installing dgwm-init, dgwm-config, and dgwm-run scripts"
 
-sudo install -Dm755 dgbwm-init /usr/local/bin/dgbwm-init
-sudo install -Dm755 dgbwm-config /usr/local/bin/dgbwm-config
-sudo install -Dm755 dgbwm-run /usr/local/bin/dgbwm-run
+sudo install -Dm755 dgwm-init /usr/local/bin/dgwm-init
+sudo install -Dm755 dgwm-config /usr/local/bin/dgwm-config
+sudo install -Dm755 dgwm-run /usr/local/bin/dgwm-run
 
 success "Succesfully installed scripts."
 
 # --- Install desktop entry ---
-section "Installing dgbwm.desktop"
+section "Installing dgwm.desktop"
 
-sudo install -Dm644 dgbwm.desktop /usr/local/share/xsessions/dgbwm.desktop
+sudo install -Dm644 dgwm.desktop /usr/local/share/xsessions/dgwm.desktop
 
 # Also copy to /usr/share as some DMs only check here
 if [ -d /usr/share/xsessions ]; then
-    sudo install -Dm644 dgbwm.desktop /usr/share/xsessions/dgbwm.desktop
+    sudo install -Dm644 dgwm.desktop /usr/share/xsessions/dgwm.desktop
 fi
 
 success "Installed Desktop files."

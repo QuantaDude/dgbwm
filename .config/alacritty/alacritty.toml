@@ -1,0 +1,19 @@
+
+[terminal.shell]
+program = "/bin/fish"
+# args = ["-l"]
+
+[font]
+size = 10.0
+
+[font.normal]
+family = "Fira Code"
+style = "Bold"
+
+[general]
+import = [
+
+    "~/.config/alacritty/themes/themes/gruvbox_material_medium_dark.toml"
+]
+
+[terminal]

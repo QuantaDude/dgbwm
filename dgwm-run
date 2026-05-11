@@ -2,7 +2,7 @@
 XDG_CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
 XDG_DATA_HOME="${XDG_DATA_HOME:-$HOME/.local/share}"
 
-CONFIG="$XDG_DATA_HOME/dgbwm/.config/dgbwm/dgbwmrc"
+CONFIG="$XDG_DATA_HOME/dgwm/.config/dgwm/dgwmrc"
 [ -f "$CONFIG" ] && . "$CONFIG"
 
 : "${TERMINAL:=sh}"
@@ -72,7 +72,7 @@ case "$1" in
         ;;
 
     *)
-        echo "Usage: dgbwm-run {term|browser|fm|editor} [command] [args...]"
+        echo "Usage: dgwm-run {term|browser|fm|editor} [command] [args...]"
         exit 1
         ;;
 esac

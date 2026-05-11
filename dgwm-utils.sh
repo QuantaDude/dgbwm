@@ -1,5 +1,7 @@
 #!/bin/sh
 
+SHELLS="sh bash fish zsh"
+
 # =========================
 # Gruvbox Colors
 # =========================
@@ -231,4 +233,35 @@ set_mime_from_desktop() {
         done
         return
     done
+}
+install_pkg() {
+        pkg="$1"
+
+        if command -v "$pkg" >/dev/null 2>&1; then
+            return
+        fi
+
+        warn "$pkg is not installed."
+
+        section "Installing $pkg"
+
+                if command -v yay >/dev/null 2>&1; then
+                    yay -S --needed "$pkg"
+                else
+                    sudo pacman -S --needed "$pkg"
+                fi
+                
+    }
+
+install_shell_if_missing() {
+    shell_name="$1"
+
+    
+    # install selected shell
+    install_pkg "$shell_name"
+
+    # fish extras
+    if [ "$shell_name" = "fish" ]; then
+        install_pkg "starship"
+    fi
 }

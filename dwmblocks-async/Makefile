@@ -16,14 +16,14 @@ CFLAGS += -Wall -Wpedantic -Wextra -Wswitch-enum
 CFLAGS += $(shell pkg-config --cflags $(LIBS))
 LDLIBS := $(shell pkg-config --libs $(LIBS))
 
-BAT_SH := dgbwm_get_battery
-MEM_SH := dgbwm_get_memory
-NET_SH := dgbwm_get_internet
-VOL_SH := dgbwm_get_audio_sink
-MIC_SH := dgbwm_get_audio_source
-WETH_SH := dgbwm_get_weather
-TIME_SH := dgbwm_get_time
-DATE_SH := dgbwm_get_date
+BAT_SH := dgwm_get_battery
+MEM_SH := dgwm_get_memory
+NET_SH := dgwm_get_internet
+VOL_SH := dgwm_get_audio_sink
+MIC_SH := dgwm_get_audio_source
+WETH_SH := dgwm_get_weather
+TIME_SH := dgwm_get_time
+DATE_SH := dgwm_get_date
 
 CFLAGS += -DMEM_SH=\"$(MEM_SH)\" -DNET_SH=\"$(NET_SH)\" -DVOL_SH=\"$(VOL_SH)\" -DMIC_SH=\"$(MIC_SH)\" -DWETH_SH=\"$(WETH_SH)\" -DTIME_SH=\"$(TIME_SH)\" -DDATE_SH=\"$(DATE_SH)\" -DBAT_SH=\"$(BAT_SH)\"
 

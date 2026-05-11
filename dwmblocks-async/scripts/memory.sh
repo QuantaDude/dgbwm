@@ -6,7 +6,7 @@ TERM_CMD="${2:-auto}"
 XDG_CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
 XDG_DATA_HOME="${XDG_DATA_HOME:-$HOME/.local/share}"
 
-CONFIG_FILE="$XDG_DATA_HOME/dgbwm/.config/dgbwm/dgbwmrc"
+CONFIG_FILE="$XDG_DATA_HOME/dgwm/.config/dgwm/dgwmrc"
 
 # -------- Load terminal from config if needed --------
 

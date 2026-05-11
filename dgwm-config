@@ -3,14 +3,17 @@
 XDG_CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
 XDG_DATA_HOME="${XDG_DATA_HOME:-$HOME/.local/share}"
 
-CONFIG="$XDG_DATA_HOME/dgbwm/.config/dgbwm/dgbwmrc"
+BASHRC="$HOME/.bashrc"
 
-DGBWM_LIB="$XDG_DATA_HOME/dgbwm/dgbwm-utils.sh"
+CONFIG="$XDG_DATA_HOME/dgwm/.config/dgwm/dgwmrc"
 
-[ -f "$DGBWM_LIB" ] && . "$DGBWM_LIB"
+DGWM_LIB="$XDG_DATA_HOME/dgwm/dgwm-utils.sh"
+
+[ -f "$DGWM_LIB" ] && . "$DGWM_LIB"
 # -------- Load existing config --------
 [ -f "$CONFIG" ] && . "$CONFIG"
 
+SHELL="${SHELL:-}"
 TERMINAL="${TERMINAL:-}"
 BROWSER="${BROWSER:-}"
 FILE_MANAGER="${FILE_MANAGER:-}"
@@ -25,7 +28,7 @@ WALLPAPER="${WALLPAPER:-}"
 OLD_MODE="$MODE"
 OLD_WALLPAPER="$WALLPAPER"
 OLD_EDITOR="${EDITOR}"
-TERMINALS="st kitty alacritty ghostty konsole"
+TERMINALS="st kitty alacritty wezterm ghostty konsole"
 BROWSERS="firefox chromium brave qutebrowser librewolf"
 FMS="vifm ranger nnn lf thunar pcmanfm dolphin"
 MONITORS="btop htop top"
@@ -34,7 +37,7 @@ EDITORS="vim nvim emacs helix micro ed kate"
 # --- helpers ----
 
 choose_wallpaper() {
-    DIR="$HOME/.local/share/dgbwm/wallpapers/"
+    DIR="$HOME/.local/share/dgwm/wallpapers/"
 
     files=$(find "$DIR" -type f \( \
         -iname "*.png" -o \
@@ -94,32 +97,62 @@ cat << "EOF"
     Gruvbox Window Manager
         (config-cli)
 EOF
-    echo "==== dgbwm Config ===="
+    echo "==== dgwm Config ===="
     echo ""
-    echo "1) Terminal        : $TERMINAL"
-    echo "2) Browser         : $BROWSER"
-    echo "3) File Manager    : $FILE_MANAGER"
-    echo "4) System Monitor  : $MONITOR"
-    echo "5) Editor          : $EDITOR"
-    echo "6) Wallpaper       : ${WALLPAPER:-none}"
-    echo "7) Weather         : $WEATHER_MODE"
-    echo "8) Mode            : $MODE"
+    echo "1) Shell           : $(basename "$SHELL")"
+    echo "2) Terminal        : $TERMINAL"
+    echo "3) Browser         : $BROWSER"
+    echo "4) File Manager    : $FILE_MANAGER"
+    echo "5) System Monitor  : $MONITOR"
+    echo "6) Editor          : $EDITOR"
+    echo "7) Wallpaper       : ${WALLPAPER:-none}"
+    echo "8) Weather         : $WEATHER_MODE"
+    echo "9) Mode            : $MODE"
     echo ""
-    echo "9) Save"
-    echo "10) Exit"
+    echo "10) Save"
+    echo "11) Exit"
     echo ""
     printf "${RESET}\n"
     question "Choice: "
     read choice
 
     case "$choice" in
-        1)
-            TERMINAL=$(choose_program "Terminal" "$TERMINAL" $(detect_programs "$TERMINALS"))
+        1) 
+            user_shell=$(choose_program "Shell" "$SHELL" $SHELLS)
+            install_shell_if_missing "$user_shell"
+
+            shell_path="$(command -v "$user_shell")"
+
+            success "Selected shell: $shell_path"
+
+            # remove old SHELL export
+            sed -i '/^export SHELL=/d' "$BASHRC"
+
+            # persist shell variable
+            echo "export SHELL=$shell_path" >> "$BASHRC"
+
+            export SHELL="$shell_path"
+
+            # change login shell if possible
+            if command -v chsh >/dev/null 2>&1; then
+              question "Set $user_shell as login shell using chsh? (y/n): "
+              read ans
+
+              case "$ans" in
+                y|Y)
+                chsh -s "$shell_path"
+                success "Login shell changed to $shell_path"
+                ;;
+              esac
+            fi
             ;;
         2)
-            BROWSER=$(choose_program "Browser" "$BROWSER" $(detect_programs "$BROWSERS")) 
+            TERMINAL=$(choose_program "Terminal" "$TERMINAL" $(detect_programs "$TERMINALS"))
             ;;
         3)
+            BROWSER=$(choose_program "Browser" "$BROWSER" $(detect_programs "$BROWSERS")) 
+            ;;
+        4)
             FILE_MANAGER=$(choose_program "File Manager" "$FILE_MANAGER" $(detect_programs "$FMS"))
 
             fm_desktop=$(get_desktop_file "$FILE_MANAGER")
@@ -143,10 +176,10 @@ EOF
                 [ "$ans" = "y" ] && FM_NEEDS_TERM=1
             fi
             ;;
-        4)
+        5)
             MONITOR=$(choose_program "System Monitor" "$MONITOR" $(detect_programs "$MONITORS"))
         ;;
-        5)
+        6)
             EDITOR=$(choose_program "Editor" "$EDITOR" $(detect_programs "$EDITORS"))
 
             editor_desktop=$(get_desktop_file "$EDITOR")
@@ -170,10 +203,10 @@ EOF
             fi
         ;;
 
-        6)
+        7)
             WALLPAPER=$(choose_wallpaper)
             ;;
-        7)
+        8)
             echo ""
             info "1) Disable"
             info "2) IP-based"
@@ -191,18 +224,19 @@ EOF
                     ;;
             esac
             ;;
-        8)
+        9)
             if [ "$MODE" = "static" ]; then
                 MODE="dynamic"
             else
                 MODE="static"
             fi
             ;;
-        9)
+        10)
             mkdir -p "$(dirname "$CONFIG")"
 
 cat > "$CONFIG" <<EOF
 MODE=$MODE
+SHELL="${shell_path:-$SHELL}"
 TERMINAL=$TERMINAL
 BROWSER=$BROWSER
 FILE_MANAGER=$FILE_MANAGER
@@ -220,7 +254,7 @@ EOF
             if [ "$MODE" != "$OLD_MODE" ]; then
                 info "Mode changed → rebuilding dwm and dwmblocks..."
 
-                SRC="$XDG_DATA_HOME/dgbwm/"
+                SRC="$XDG_DATA_HOME/dgwm/"
 
                 if [ "$WEATHER_MODE" = "none" ]; then
                     WEATHER_BLOCK=0
@@ -269,7 +303,6 @@ EOF
             fi
 
             if [ "$EDITOR" != "$OLD_EDITOR" ]; then
-                BASHRC="$HOME/.bashrc"
 
                 sed -i '/^export EDITOR=/d' "$BASHRC"
                 sed -i '/^export VISUAL=/d' "$BASHRC"
@@ -281,7 +314,7 @@ EOF
                 feh --bg-fill "$WALLPAPER"
             fi        
             ;;
-        10)
+        11)
             exit 0
             ;;
     esac

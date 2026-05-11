@@ -4,10 +4,10 @@
 XDG_CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
 XDG_DATA_HOME="${XDG_DATA_HOME:-$HOME/.local/share}"
 
-CONFIG="$XDG_DATA_HOME/dgbwm/.config/dgbwm/dgbwmrc"
+CONFIG="$XDG_DATA_HOME/dgwm/.config/dgwm/dgwmrc"
 [ -f "$CONFIG" ] && . "$CONFIG"
 
-fontconfig=$XDG_DATA_HOME/dgbwm/.config/fonts.conf 
+fontconfig=$XDG_DATA_HOME/dgwm/.config/fonts.conf 
 # Set wallpaper
 if command -v feh >/dev/null 2>&1 && [ -n "$WALLPAPER" ]; then
     feh --bg-fill "$WALLPAPER" &
@@ -16,11 +16,11 @@ fi
 FONTCONFIG_FILE=$fontconfig dwmblocks &
 FONTCONFIG_FILE=$fontconfig dunst --config "$XDG_CONFIG_HOME/dunst/dunstrc" &
 
-dgbwm_get_audio_sink --listen &
-dgbwm_get_audio_source --listen &
+dgwm_get_audio_sink --listen &
+dgwm_get_audio_source --listen &
 
 if [ "${IS_LAPTOP:-0}" -eq 1 ]; then
-    dgbwm_get_battery --listen &
+    dgwm_get_battery --listen &
 fi
 
 while true; do

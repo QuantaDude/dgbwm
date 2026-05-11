@@ -1,7 +1,7 @@
 [Desktop Entry]
 Encoding=UTF-8
-Name=DGBWM
+Name=DGWM
 Comment=The Dynamic GruvBox (themed) window manager
-Exec=/usr/local/bin/dgbwm-init
-Icon=dgbwm
+Exec=/usr/local/bin/dgwm-init
+Icon=dgwm
 Type=XSession
