@@ -23,6 +23,8 @@ if [ "${IS_LAPTOP:-0}" -eq 1 ]; then
     dgwm_get_battery --listen &
 fi
 
+eval "$(ssh-agent -s)"
+
 while true; do
         FONTCONFIG_FILE=$fontconfig dwm 2>"$HOME/.dwm.log"
 done

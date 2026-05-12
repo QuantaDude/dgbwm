@@ -179,7 +179,7 @@ DGWM_LIB="$XDG_DATA_HOME/dgwm/dgwm-utils.sh"
 [ -f "$DGWM_LIB" ] && . "$DGWM_LIB"
 
 # --- I have x11-ssh-askpass as a dependency because my openssh does not prompt me for a password, I need this
-DEPS="feh xorg-server x11-ssh-askpass libx11 pango dbus libxrandr libxinerama libxss xdg-utils pod2man fontconfig xorg-mkfontdir xorg-mkfontscale curl ttf-jetbrains-mono-nerd ttf-fira-code"
+DEPS="feh xorg-server openssh xorg-xauth x11-ssh-askpass libx11 pango dbus libxrandr libxinerama libxss xdg-utils pod2man fontconfig xorg-mkfontdir xorg-mkfontscale curl ttf-jetbrains-mono-nerd ttf-fira-code"
 
 FONTS="
 JetBrainsMono Nerd Font

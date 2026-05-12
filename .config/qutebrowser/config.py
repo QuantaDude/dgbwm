@@ -8,4 +8,14 @@ c.fonts.tabs.unselected = "14pt monospace"
 c.fonts.statusbar = "14pt monospace"
 c.tabs.padding = {'top': 6, 'bottom': 6, 'left': 8, 'right': 8}
 c.statusbar.padding = {'top': 4, 'bottom': 4, 'left': 6, 'right': 6}
+
+c.colors.webpage.darkmode.enabled = False
+c.colors.webpage.preferred_color_scheme = "dark"
+
+c.content.user_stylesheets = [
+    "~/.config/qutebrowser/styles/gruvbox-soft.css"
+]
+# Toggle stylesheet with a keybind (e.g. ,s)
+config.bind(',s', 'config-cycle content.user_stylesheets [] ["~/.config/qutebrowser/styles/gruvbox-soft.css"]')
+
 gruvbox.set(c, 'dark', 'hard') # options are dark/light and hard/medium/soft

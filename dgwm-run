@@ -10,6 +10,20 @@ CONFIG="$XDG_DATA_HOME/dgwm/.config/dgwm/dgwmrc"
 : "${FILE_MANAGER:=vifm}"
 : "${EDITOR:=vim}"
 
+
+term_exec() {
+    term="$(basename "$TERMINAL")"
+
+    case "$term" in
+        wezterm)
+            "$TERMINAL" start -- "$@"
+            ;;
+        *)
+            "$TERMINAL" -e "$@"
+            ;;
+    esac
+}
+
 run() {
     [ -z "$1" ] && {
         echo "Error: command is empty"
@@ -41,7 +55,7 @@ case "$1" in
     term-app)
         cmd="$2"
         shift 2
-        run "$TERMINAL" -e "$cmd" "$@"
+        term_exec "$cmd" "$@"
         ;;
     browser)
         cmd="$(pick_cmd "$BROWSER" "$2")"
@@ -54,7 +68,7 @@ case "$1" in
         if [ "$cmd" = "$2" ]; then shift 2; else shift 1; fi
 
         if [ "${FM_NEEDS_TERM:-0}" -eq 1 ]; then
-            run "$TERMINAL" -e "$cmd" "$@"
+                term_exec "$cmd" "$@"
         else
             run "$cmd" "$@"
         fi
@@ -65,7 +79,7 @@ case "$1" in
         if [ "$cmd" = "$2" ]; then shift 2; else shift 1; fi
 
         if [ "${ED_NEEDS_TERM:-0}" -eq 1 ]; then
-            run "$TERMINAL" -e "$cmd" "$@"
+                term_exec "$cmd" "$@"
         else
             run "$cmd" "$@"
         fi

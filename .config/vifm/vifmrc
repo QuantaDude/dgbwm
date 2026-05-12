@@ -43,17 +43,17 @@ nnoremap <f8> :delete<cr>
 nnoremap S :sort<cr>
 
 " Open shell here
-nnoremap ,t :!xterm &<cr>
+nnoremap ,t :!dgwm-run term &<cr>
 
 " Edit configs
-nnoremap ,v :!nvim ~/.config/vifm/vifmrc<cr>
-nnoremap ,n :!nvim ~/.config/nvim/<cr>
+nnoremap ,v :!dgwm-run editor ~/.config/vifm/vifmrc &<cr>
+nnoremap ,n :!dgwm-run editor ~/.config/nvim/ &<cr>
 
-" Reload vifm
+" Reloadvifm
 nnoremap ,r :restart<cr>
 
 " Open current file externally
-nnoremap o :!xdg-open "%c" &<cr>
+nnoremap o :open<cr>
 
 " View mode
 nnoremap w :view<cr>
@@ -80,11 +80,11 @@ nnoremap pp :put %c:p<cr>
 
 " Text
 filextype *.txt,*.md,*.c,*.cpp,*.h,*.hpp,*.lua,*.py,*.js,*.ts,*.json,*.toml,*.yaml,*.yml
-        \ nvim %f
+        \ dgwm-run editor %f &
 
 " Images
 filextype *.png,*.jpg,*.jpeg,*.gif,*.webp,*.bmp,*.svg
-        \ nsxiv %f &
+        \ feh %f &
 
 " PDFs / ebooks
 filextype *.pdf
@@ -94,17 +94,17 @@ filextype *.epub
         \ zathura %f &
 
 " Audio / Video
-filextype *.mp3,*.flac,*.wav,*.ogg,*.opus,*.m4a,
+filextype *.m4a,
         \ *.mp4,*.mkv,*.webm,*.avi,*.mov
         \ mpv %f &
 
 " Archives
 filextype *.zip,*.tar,*.tar.gz,*.tgz,*.tar.xz,*.7z,*.rar
-        \ xterm -e atool -x %f
+        \ dgwm-run term-app -e atool -x %f
 
 " Default
 filetype *
-        \ xdg-open %f &
+        \ xdg-open %c:p &
 
 " =========================
 " Previewers
@@ -158,7 +158,7 @@ fileviewer *.rar
 " =========================
 
 filextype *.sh,*.run
-        \ xterm -e bash %f
+        \ dgwm-run term-app -e bash %f
 
 filextype *.AppImage
         \ chmod +x %f && %f &

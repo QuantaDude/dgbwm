@@ -1,0 +1,201 @@
+
+/* ── Gruvbox Dark ────────────────────────────────────────────── */
+
+/* Reset only real layout elements, not everything */
+html,
+body {
+  background-color: #32302f !important;
+  color: #ddc7a1 !important;
+  scrollbar-color: #665c54 #32302f !important;
+}
+
+/* Caret & selection */
+* {
+  caret-color: #d8a657 !important;
+  border-color: #5a524c !important;
+  box-shadow: none !important;
+}
+
+/* Gentle transitions (exclude SVG/math to avoid flash artifacts) */
+*:not(svg):not(svg *):not(.MathJax):not(.MathJax *):not(.katex):not(.katex *) {
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease !important;
+}
+
+/* ── Layout containers ───────────────────────────────────────────────── */
+div,
+section,
+article,
+main,
+nav,
+aside,
+header,
+footer,
+[role="main"],
+[role="complementary"] {
+  background-color: #32302f !important;
+}
+
+/* ── Typography ──────────────────────────────────────────────────────── */
+p,
+span,
+li,
+td,
+th,
+label,
+blockquote,
+figcaption {
+  color: #d5c4a1 !important;
+}
+
+h1 {
+  color: #ea6962 !important;
+}
+h2 {
+  color: #e78a4e !important;
+}
+h3 {
+  color: #d8a657 !important;
+}
+h4 {
+  color: #a9b665 !important;
+}
+h5 {
+  color: #89b482 !important;
+}
+h6 {
+  color: #7daea3 !important;
+}
+
+/* ── Links ───────────────────────────────────────────────────────────── */
+a,
+a * {
+  color: #7daea3 !important;
+  text-decoration-color: #7daea3 !important;
+}
+a:visited,
+a:visited * {
+  color: #a899c8 !important;
+}
+a:hover,
+button:hover {
+  color: #e78a4e !important;
+}
+
+/* ── Inputs & buttons ────────────────────────────────────────────────── */
+input,
+textarea,
+select,
+button {
+  background-color: #3c3836 !important;
+  color: #ddc7a1 !important;
+  border: 1px solid #5a524c !important;
+}
+
+/* ── Code ────────────────────────────────────────────────────────────── */
+code,
+pre,
+kbd,
+samp {
+  background-color: #282828 !important;
+  color: #a9b665 !important;
+  border: 1px solid #504945 !important;
+}
+
+/* ── Tables ──────────────────────────────────────────────────────────── */
+table,
+tr,
+td,
+th {
+  background-color: #32302f !important;
+  border-color: #504945 !important;
+}
+
+/* ── Images & video ──────────────────────────────────────────────────── */
+img,
+video {
+  opacity: 0.95;
+  filter: saturate(0.92) brightness(0.96) !important;
+}
+
+/* ── SVG — let them render naturally ─────────────────────────────────── */
+svg,
+svg * {
+  background-color: transparent !important;
+  /* Do NOT override fill/stroke — let the SVG's own attributes control them */
+}
+
+/* ── LaTeX: MathJax ──────────────────────────────────────────────────── */
+.MathJax,
+.MathJax *,
+.MathJax_Display,
+.MathJax_Display *,
+mjx-container,
+mjx-container * {
+  background-color: transparent !important;
+  color: #d5c4a1 !important;
+  border: none !important;
+}
+
+/* MathJax 3 renders via SVG — override fill directly */
+mjx-container svg,
+mjx-container svg * {
+  fill: #d5c4a1 !important;
+  color: #d5c4a1 !important;
+  background-color: transparent !important;
+}
+
+/* ── LaTeX: KaTeX ────────────────────────────────────────────────────── */
+.katex,
+.katex *,
+.katex-display,
+.katex-display * {
+  background-color: transparent !important;
+  color: #d5c4a1 !important;
+  border: none !important;
+}
+
+/* KaTeX SVG fallback */
+.katex svg,
+.katex svg * {
+  fill: #d5c4a1 !important;
+  background-color: transparent !important;
+}
+
+/* ── Inline style overrides (white flash prevention) ─────────────────── */
+[style*="background:white"],
+[style*="background: white"],
+[style*="background:#fff"],
+[style*="background: #fff"],
+[style*="background-color:white"],
+[style*="background-color: white"],
+[style*="background-color:#fff"],
+[style*="background-color: #fff"],
+[style*="background-color:#ffffff"],
+[style*="background-color: #ffffff"] {
+  background-color: #32302f !important;
+}
+
+/* ── Scrollbars ──────────────────────────────────────────────────────── */
+::-webkit-scrollbar {
+  width: 10px !important;
+  height: 10px !important;
+}
+::-webkit-scrollbar-track {
+  background: #32302f !important;
+}
+::-webkit-scrollbar-thumb {
+  background: #5a524c !important;
+  border-radius: 8px !important;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #665c54 !important;
+}
+
+/* ── Selection ───────────────────────────────────────────────────────── */
+::selection {
+  background: #d8a657 !important;
+  color: #282828 !important;
+}
+
