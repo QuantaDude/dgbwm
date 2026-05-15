@@ -1052,7 +1052,7 @@ fi
 
 
 if [ "$HAS_CONFIG" -eq 0 ]; then
-    echo ""
+  echo ""
     info "Setting feh as the default image viewer..."
 
     set_mime_from_desktop "feh.desktop" "image/"
@@ -1102,6 +1102,18 @@ if [ "$HAS_CONFIG" -eq 0 ]; then
     fi
     
     fi
+  if command -v zathura >/dev/null 2>&1; then
+    echo ""
+    info "Setting zathura as the default document viewer..."
+    xdg-mime default org.pwmt.zathura.desktop application/pdf
+    xdg-mime default org.pwmt.zathura.desktop application/oxps
+    xdg-mime default org.pwmt.zathura.desktop application/epub+zip
+    xdg-mime default org.pwmt.zathura.desktop application/x-fictionbook
+    xdg-mime default org.pwmt.zathura.desktop application/x-mobipocket-ebook
+    xdg-mime default org.pwmt.zathura.desktop image/vnd.djvu
+    xdg-mime default org.pwmt.zathura.desktop image/vnd.djvu+multipage
+    success "Using zathura for viewing pdfs, epubs, djvu"
+  fi
 
 fi
 

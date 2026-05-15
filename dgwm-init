@@ -8,6 +8,14 @@ CONFIG="$XDG_DATA_HOME/dgwm/.config/dgwm/dgwmrc"
 [ -f "$CONFIG" ] && . "$CONFIG"
 
 fontconfig=$XDG_DATA_HOME/dgwm/.config/fonts.conf 
+
+export EDITOR=$EDITOR
+export VISUAL=$EDITOR
+
+if [ -z "$SSH_AUTH_SOCK" ]; then
+    eval "$(ssh-agent -s)"
+fi
+
 # Set wallpaper
 if command -v feh >/dev/null 2>&1 && [ -n "$WALLPAPER" ]; then
     feh --bg-fill "$WALLPAPER" &
