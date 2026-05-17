@@ -1,0 +1,24 @@
+# Enable recoloring
+set recolor true
+
+# Better color handling
+set recolor-keephue true
+set recolor-reverse-video false
+
+# Soft Gruvbox palette
+set default-bg "#32302f"
+set default-fg "#ebdbb2"
+
+# Optional status bar/input colors
+set statusbar-bg "#3c3836"
+set statusbar-fg "#d5c4a1"
+
+set inputbar-bg "#3c3836"
+set inputbar-fg "#ebdbb2"
+
+set notification-bg "#3c3836"
+set notification-fg "#ebdbb2"
+
+# Selection colors
+set recolor-lightcolor "#32302f"
+set recolor-darkcolor "#ebdbb2"
